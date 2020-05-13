@@ -1,0 +1,59 @@
+From raw data file
+
+hdf5 structure:
+
+raw - data straight from the raw files
+ext - externally supplied data
+drv - derived data products
+
+In raw:
+
+tx0
+ -Chirp bandwidth
+ -Chirp center freq
+ -Chirp length
+ -Pulse repetition freq
+ -Synthetic chirp
+rx0
+ -Sampling frequency
+ -Stacking
+ -Any correction note
+ -Number of traces (redundant)
+ -Samples per trace (redundant)
+ -Trace length (redundant)
+time0
+ -Source
+ -UTC struct
+ -struct {
+       fracSecond (double precision floating point)
+       fullSecond (2 byte unsigned int - starts at 0)
+       minute     (2 byte unsigned int - starts at 0)
+       hour       (2 byte unsigned int - starts at 0)
+       day        (2 byte unsigned int - starts at 1)
+       month      (2 byte unsigned int - starts at 1)
+       year       (2 byte unsigned int)
+  }    
+loc0
+ -Initial navigation data
+ -EPSG CRS
+ -At least lat,lon,elev (or x,y,z)
+
+In ext:
+
+nav0
+ -Improved navigation from lidar
+ -Notes about correction and source
+ -EPSG CRS
+ -At least lat,lon,elev (or x,y,z)
+srf0
+ -Surface from ldidar
+ref0
+ -Reference chirp, externally supplied
+
+In drv:
+clutter0
+ -Clutter simulations
+proc0
+ -Info about processing
+pick:
+ - Another group with per-pick dataset
