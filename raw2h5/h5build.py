@@ -14,13 +14,15 @@ def generateChirp(cf, bw, length, fs):
 
   return c
 
-def h5build(dd, f):
+def h5build(dd, outf):
 
   # Create group structure
   # |-raw
   # |-drv
   # |  |-pick
   # |-ext
+
+  f = h5py.File(outf, "w")
 
   raw = f.create_group("raw") 
   drv = f.create_group("drv")
@@ -69,5 +71,7 @@ def h5build(dd, f):
   timeList = np.array(timeList, dtype=time_t)
   time0 = raw.create_dataset("time0", data=timeList, dtype=time_t)
   time0.attrs.create("Clock", np.string_("GPS"))
-  
+
+  f.close()
+
   return 0

@@ -162,11 +162,14 @@ def main():
   print(outf)
   if(dd == -1):
     exit()
+
+  h5build(dd, outf)
+
   # Open file
   f = h5py.File(outf, "w")
+
   # Some basic info at file root
   f.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
-  h5build(dd, f)
   f.close()
 
 main()
