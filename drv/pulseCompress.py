@@ -173,6 +173,7 @@ def main():
   shift = findOffset(rx0, refchirp, cf, fs)
 
   print("shift=",shift)
+  print("ntrace=",rx0.shape[1])
   # Circular shift to correct for hardware delay
   rx0 = np.roll(rx0, -shift, axis=0)
 
