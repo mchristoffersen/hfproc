@@ -50,8 +50,6 @@ def parseRaw(fname):
       dd["rx0"][:,i] = struct.unpack('f'*dd["spt"], data[ofst+56:ofst+56+dd["spt"]*4])
   
   dd["rx0"] = np.array(dd["rx0"]).astype(np.float32)
-  # Circular shift to correct for xmit delay in Ettus hardware
-  dd["rx0"] = np.roll(dd["rx0"], -105, axis=0)
 
   return dd
 
