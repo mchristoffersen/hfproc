@@ -33,50 +33,50 @@ def tdmsSlice(data, spt, bark, spb):
   
 def parseRaw(fname):
   dd = {}
+
   fd = nptdms.TdmsFile(fname)
-  radar = fd.object("radar")
-  
+
   try:
-    meta = fd.object("meta")
-  except KeyError:
+    fd["meta"]
+  except:
     sys.stdout.write("No meta object, skipping: ")
     return -1
-    
-  ch0 = fd.channel_data("radar","ch0")
-  lat = fd.channel_data("meta","lat")
-  lon = fd.channel_data("meta","lon")
-  elev = fd.channel_data("meta","elev")
-  time = fd.channel_data("meta","time")
-  root = fd.object()
+
+  ch0 = fd["radar"]["ch0"]  #.channel_data("radar","ch0")
+  lat = fd["meta"]["lat"]
+  lon = fd["meta"]["lon"]
+  elev = fd["meta"]["elev"]
+  time = fd["meta"]["time"]
+  root = fd.properties
   
-  startTime = root.property("start_time")
+  startTime = root["start_time"]
   startTime = datetime.strptime(startTime, "%Y-%m-%dT%H:%M:%S.%f")
   
-  dd["chirpCF"] = root.property("chirp_cf")
-  dd["chirpBW"] = root.property("chirp_bw")/100
-  dd["chirpLen"] = root.property("chirp_len")
-  dd["chirpAmp"] = root.property("chirp_amp")
-  dd["chirpPRF"] = root.property("prf")
-  dd["fs"] = 1.0/root.property("dt")
-  dd["stack"] = root.property("stacking")
-  dd["spt"] = root.property("record_len")
-  dd["traceLen"] = root.property("dt") * dd["spt"]
+  dd["chirpCF"] = root["chirp_cf"]
+  dd["chirpBW"] = root["chirp_bw"]/100
+  dd["chirpLen"] = root["chirp_len"]
+  dd["chirpAmp"] = root["chirp_amp"]
+  dd["chirpPRF"] = root["prf"]
+  dd["fs"] = 1.0/root["dt"]
+  dd["stack"] = root["stacking"]
+  dd["spt"] = root["record_len"]
+  dd["traceLen"] = root["dt"] * dd["spt"]
   
   # Some files have "pulse" and not "bark"
   try:
-    bark = root.property("bark")
+    bark = root["bark"]
   except KeyError:
-    bark = root.property("pulse")
+    bark = root["pulse"]
     
   try:
-    bark_len = root.property("bark_len")
+    bark_len = root["bark_len"]
   except KeyError:
-    bark_len = root.property("pulse_len")
+    bark_len = root["pulse_len"]
 
   try:
-    bark_delay = root.property("bark_delay")
+    bark_delay = root["bark_delay"]
   except KeyError:
-    bark_delay = root.property("pulse_delay")
+    bark_delay = root["pulse_delay"]
     
   spb = int(np.ceil((bark_len+bark_delay)*dd["fs"]))
   
@@ -133,9 +133,6 @@ def parseRaw(fname):
   dd["ntrace"] = dd["rx0"].shape[1]
   dd["rx0"] = dd["rx0"][:,0:dd["ntrace"]].astype(np.float32)
   
-  # Circular shift to correct for xmit delay in NI hardware
-  dd["rx0"] = np.roll(dd["rx0"], -25, axis=0)
-   
   dd["lat"] = np.zeros(dd["ntrace"]).astype("float")
   dd["lon"] = np.zeros(dd["ntrace"]).astype("float")
   dd["alt"] = np.zeros(dd["ntrace"]).astype("float")
@@ -159,17 +156,17 @@ def parseRaw(fname):
 def main():
   dd = parseRaw(sys.argv[1])
   outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".tdms",".h5")
-  print(outf)
+  print()
   if(dd == -1):
     exit()
 
-  h5build(dd, outf)
-
   # Open file
-  f = h5py.File(outf, "w")
+  fd = h5py.File(outf, "w")
+
+  h5build(dd, fd)
 
   # Some basic info at file root
-  f.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
-  f.close()
+  fd.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
+  fd.close()
 
 main()

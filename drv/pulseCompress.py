@@ -2,8 +2,12 @@ import h5py
 import numpy as np
 import sys
 from scipy.signal import hilbert
+import matplotlib.pyplot as plt
 
 def pulseCompress(rx0, refchirp):
+  if(len(rx0.shape) == 1):
+    rx0 = np.expand_dims(rx0, 1)
+
   pc = np.zeros(rx0.shape).astype("float32")
   refchirp = np.append(refchirp, np.zeros(len(rx0) - len(refchirp)))
   C = np.conj(np.fft.fft(refchirp))
@@ -121,6 +125,24 @@ def baseChirp(tlen, cf, bw, fs):
 
     return c
 
+def findOffset(rx0, tlen, cf, bw, fs):
+  # Make chirp that is second half of real chirp
+  tlen = tlen/2
+  endf = cf + (.5*cf*bw)
+  startf = cf
+  cf = (startf+endf)/2
+  bw = (endf-startf)/cf
+  refchirp = baseChirp(tlen, cf, bw, fs)
+
+  # Baseband data to cf of new chirp
+  rx0 = baseband(rx0, cf, fs)
+
+  # Cross correlate with avg of first 10 traces, get peak loc
+  rxAvg = np.mean(rx0[:,0:10], axis=1)
+  pkLoc = np.argmax(pulseCompress(rxAvg, refchirp))
+
+  return int(pkLoc - (tlen*fs))
+
 def baseband(sig, cf, fs):
   # Baseband traces to the frequency cf
   i = np.complex(0,1)
@@ -143,7 +165,12 @@ def main():
   tl = f["raw"]["tx0"].attrs["chirpLength-S"]
   fs = f["raw"]["rx0"].attrs["samplingFrequency-Hz"]
 
-  # Process data
+  ### Process data
+  # Find hardware delay with outgoing wave
+  shift = findOffset(rx0, tl, cf, bw, fs)
+  # Circular shift to correct for hardware delay
+  rx0 = np.roll(rx0, -shift, axis=0)
+
   avgw = 250
   if(rx0.shape[1] > avgw):
     rx0 = removeSlidingMeanFFT(rx0, avgw)
