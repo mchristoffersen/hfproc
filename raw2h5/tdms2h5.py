@@ -156,7 +156,7 @@ def parseRaw(fname):
 def main():
   dd = parseRaw(sys.argv[1])
   outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".tdms",".h5")
-  print()
+  print(outf)
   if(dd == -1):
     exit()
 

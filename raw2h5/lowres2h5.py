@@ -63,13 +63,13 @@ def main():
   outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".dat",".h5")
   print(outf)
 
-  h5build(dd, outf)
-
   # Open file
-  f = h5py.File(outf, "w")
+  fd = h5py.File(outf, "w")
+
+  h5build(dd, fd)
 
   # Some basic info at file root
-  f.attrs.create("Info", np.string_("Data acquired by the University of Arizona Long Wavelength Radio Echo Sounder (LoWRES) radar system"))
-  f.close()
+  fd.attrs.create("Info", np.string_("Data acquired by the University of Arizona Long Wavelength Radio Echo Sounder (LoWRES) radar system"))
+  fd.close()
 
 main()
