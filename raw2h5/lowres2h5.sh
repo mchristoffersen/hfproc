@@ -6,8 +6,8 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-ipfix=/zippy/MARS/orig/supl/UAF/radar/2019
-opfix=/zippy/MARS/targ/supl/UAF/2019/hdf5
+ipfix=/zippy/MARS/orig/supl/UAF/radar/2020
+opfix=/zippy/MARS/targ/supl/UAF/2020/hdf5
 cpfix=/zippy/MARS/code/xped/hfProc/raw2h5
 
 for p in $ipfix/*.dat;
