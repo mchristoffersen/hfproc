@@ -7,7 +7,7 @@ rm -f ./job.txt
 touch ./job.txt
 
 ipfix=/zippy/MARS/targ/supl/UAF/2018/hdf5
-cpfix=/zippy/MARS/code/xped/hfProc/drv
+cpfix=/zippy/MARS/code/xped/hfproc/drv
 
 for p in $ipfix/*.h5;
 do

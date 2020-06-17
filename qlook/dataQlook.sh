@@ -9,7 +9,7 @@ touch ./job.txt
 year=2020
 ipfix=/zippy/MARS/targ/supl/UAF/$year/hdf5
 opfix=/zippy/MARS/targ/supl/UAF/$year/qlook/
-cpfix=/zippy/MARS/code/xped/hfProc/qlook
+cpfix=/zippy/MARS/code/xped/hfproc/qlook
 
 for p in $ipfix/*.h5;
 do

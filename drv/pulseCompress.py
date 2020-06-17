@@ -138,9 +138,6 @@ def findOffset(rx0, refchirp, cf, fs):
   mtPC = pulseCompress(mt, refchirp)
   pkLoc = np.argmax(np.abs(mtPC))
 
-  #plt.plot(mtPC)
-  #plt.show()
-
   return (pkLoc - len(mt)//2)
 
 def baseband(sig, cf, fs):
@@ -170,12 +167,10 @@ def main():
   refchirp = baseChirp(tl, cf, bw, fs)
 
   # Find hardware delay with outgoing wave
-  shift = findOffset(rx0, refchirp, cf, fs)
-
-  print("shift=",shift)
-  print("ntrace=",rx0.shape[1])
-  # Circular shift to correct for hardware delay
-  rx0 = np.roll(rx0, -shift, axis=0)
+#  shift = findOffset(rx0, refchirp, cf, fs)
+#  print("%s,%d,%d" % (sys.argv[1].split('/')[-1], shift, rx0.shape[1]))
+  # Circular shift to correct for hardware delay - done in raw2h5 conversions now
+#  rx0 = np.roll(rx0, -shift, axis=0)
 
   avgw = 250
   if(rx0.shape[1] > avgw):

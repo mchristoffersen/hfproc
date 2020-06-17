@@ -8,7 +8,7 @@ touch ./job.txt
 
 ipfix=/zippy/MARS/targ/supl/UAF/2019/hdf5/
 opfix=/zippy/MARS/targ/supl/UAF/2019/clutterNav/
-cpfix=/zippy/MARS/code/xped/hfProc/drv/
+cpfix=/zippy/MARS/code/xped/hfproc/drv/
 
 for p in $ipfix/*.h5;
 do

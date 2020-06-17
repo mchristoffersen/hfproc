@@ -48,8 +48,9 @@ def parseRaw(fname):
       dd["nsat"][i] = fix[8]
 
       dd["rx0"][:,i] = struct.unpack('f'*dd["spt"], data[ofst+56:ofst+56+dd["spt"]*4])
-  
+
   dd["rx0"] = np.array(dd["rx0"]).astype(np.float32)
+  dd["rx0"] = np.roll(dd["rx0"], -109, axis=0)
 
   return dd
 

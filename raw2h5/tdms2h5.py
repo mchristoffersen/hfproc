@@ -150,7 +150,23 @@ def parseRaw(fname):
     dd["alt"][i] = elev[i]
     dd["dop"][i] = -1
     dd["nsat"][i] = -1
-  
+
+  # Rotate out HW delay
+  date = datetime.utcfromtimestamp(dd["tfull"][i] + dd["tfrac"][i])
+
+  if(date.year != 2018 and date.month not in (5,8)):
+    print("Unknown tdms data source")
+    sys.exit(1)
+
+  # Handle offset changes over campaign
+  # May is constant, but a split in Aug
+  if(date.month == 5):
+    dd["rx0"] = np.roll(dd["rx0"], -14, axis=0)
+  elif(date.month == 8 and date.day in (17,18,19,20)):
+    dd["rx0"] = np.roll(dd["rx0"], 158, axis=0)
+  elif(date.month == 8):
+    dd["rx0"] = np.roll(dd["rx0"], 14, axis=0)
+
   return dd
 
 def main():

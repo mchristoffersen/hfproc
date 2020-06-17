@@ -50,8 +50,7 @@ def main():
   if(out.shape[0] > spt):
     out = out[:spt,:]
 
-  del f["drv"]["clutter0"]
-  clutter0 = f["drv"].create_dataset("clutter0", data=out.astype(np.float32), shape=out.shape, dtype=np.float32, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
+  clutter0 = f["drv"].require_dataset("clutter0", data=out.astype(np.float32), shape=out.shape, dtype=np.float32, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
   f.close()
 
 main()

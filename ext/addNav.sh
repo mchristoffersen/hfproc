@@ -8,7 +8,7 @@ touch ./job.txt
 
 npfix=/zippy/MARS/targ/supl/UAF/2019/larsen_nav
 dpfix=/zippy/MARS/targ/supl/UAF/2019/hdf5
-cpfix=/zippy/MARS/code/xped/hfProc/ext
+cpfix=/zippy/MARS/code/xped/hfproc/ext
 
 python $cpfix/addNav.py $npfix $dpfix
 

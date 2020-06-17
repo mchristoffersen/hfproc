@@ -6,9 +6,9 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-cpfix=/zippy/MARS/code/xped/hfProc/drv
-dpfix=/zippy/MARS/code/modl/simc/out/ak2018
-ipfix=/zippy/MARS/targ/supl/UAF/2018/hdf5
+cpfix=/zippy/MARS/code/xped/hfproc/drv
+dpfix=/zippy/MARS/targ/supl/UAF/2020/sim
+ipfix=/zippy/MARS/targ/supl/UAF/2020/hdf5
 
 for p in $dpfix/*_combined.img;
 do
