@@ -8,6 +8,22 @@ from datetime import datetime, timedelta
 import os.path
 import pandas as pd
 
+def findOffsetDT(rx0):
+  # Find offset with time derivative. 
+  # Get mean trace
+  mt = np.mean(rx0, axis=1)
+
+  # Gradient
+  dmt = np.gradient(mt)
+
+  # Standard deviation
+  std = np.std(dmt)
+
+  # Find first place with slope > 1 std dev
+  pkLoc = np.argmax(np.abs(dmt) > std)
+
+  return pkLoc
+
 
 def parseRaw(fname):
   dd = {}
@@ -91,7 +107,34 @@ def parseRaw(fname):
     elif(dd["sig"] == "chirp"):
       dd["rx0"] = np.roll(dd["rx0"], -393, axis=0)
 
-  elif()
+  # 2016 May
+  elif(date.year == 2016 and date.month == 5):
+    if(dd["sig"] == "impulse"):
+      ofst = findOffsetDT(dd["rx0"])
+      dd["rx0"] = np.roll(dd["rx0"], -ofst, axis=0)
+    elif(dd["sig"] == "chirp"):
+      # This won't work for a few, need to get more granular
+      dd["rx0"] = np.roll(dd["rx0"], -570, axis=0)
+
+  # 2016 Aug
+  elif(date.year == 2016 and date.month == 8):
+    if(dd["sig"] == "impulse"):
+      dd["rx0"] = np.roll(dd["rx0"], -325, axis=0)
+    elif(dd["sig"] == "chirp"):
+      # This won't work for a few, need to get more granular
+      dd["rx0"] = np.roll(dd["rx0"], -565, axis=0)
+
+  #2017 May
+  elif(date.year == 2017 and date.month == 5):
+    dd["rx0"] = np.roll(dd["rx0"], -571, axis=0)
+
+  elif(date.year == 2017 and date.month == 8):
+    if(date.day <= 16):
+      dd["rx0"] = np.roll(dd["rx0"], -370, axis=0)
+    elif(date.day == 22):
+      dd["rx0"] = np.roll(dd["rx0"], -477, axis=0)
+    elif(date.day > 22):
+      dd["rx0"] = np.roll(dd["rx0"], -364, axis=0)
 
   else:
     print("NO OFFSET CORRECTION FOUND\n\t" + fn)
