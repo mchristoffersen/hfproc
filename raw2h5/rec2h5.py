@@ -56,6 +56,7 @@ def parseRaw(fname):
   dd["lat"] = lat.astype(np.float32)
   dd["lon"] = lon.astype(np.float32)
   dd["alt"] = elev.astype(np.float32)
+  print(dd["lat"])
 
   dd["tfull"] = np.zeros(dd["ntrace"]).astype(np.uint64)
   dd["tfrac"] = np.zeros(dd["ntrace"]).astype(np.float64)
@@ -83,7 +84,7 @@ def parseRaw(fname):
   # Deal with duplicate times
   timen = np.zeros(len(time))
   for i in range(dd["ntrace"]):
-    timen[i] = time[i].value/10e9
+    timen[i] = time[i].value/10e8
 
   uniq, idx = np.unique(timen, return_index=True)
   x = np.array(range(len(timen)))
