@@ -9,16 +9,18 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-ipfix=/zippy/MARS/targ/supl/UAF/2020/hdf5
-spfix=/zippy/MARS/orig/supl/UAF/lidar/2020
 cpfix=/zippy/MARS/code/xped/hfproc/ext
-math_op=median
+dstpfix=/zippy/MARS/targ/supl/UAF/2019/hdf5
+srcpfix=/zippy/MARS/targ/supl/UAF/2019/toffset/hdf5
 
-for p in $ipfix/*.h5;
+for p in $dstpfix/*.h5;
 do
-    echo "python $cpfix/fresnelElev.py $spfix $p $math_op" >> ./job.txt
+    p=$(basename -- $p)
+    echo "python $cpfix/copyProc0.py $srcpfix/$p $dstpfix/$p" >> ./job.txt
 done
 
 parallel -j 35 < ./job.txt
 
 rm job.txt
+
+

@@ -1,6 +1,7 @@
 import numpy as np
 import h5py, glob, sys, json, subprocess
 from osgeo import gdal, osr, ogr
+import pdal
 import xml.etree.ElementTree as et
 import pandas as pd
 import laspy.file as lasf
@@ -24,12 +25,13 @@ def lasOpen(lasDir, h5file):
   # Get list of las files
   lasfiles = db[h5file.split('/')[-1]].keys()
   lasfiles = list(lasfiles)
-  
+  print(lasfiles)
   if(len(lasfiles) == 0):
     print(h5file + " has no associated LAS files. Exiting.")
     exit()
 
   # Open and merge las files into one array
+
   f = lasf.File(lasDir + "/" + lasfiles[0], mode='r')
   xl = f.x
   yl = f.y
@@ -43,15 +45,23 @@ def lasOpen(lasDir, h5file):
       yl = np.append(yl, f.y)
       zl = np.append(zl, f.z)
       f.close()
-      
+
     # Check that same coordinate system assumption is valid
   crs = [None]*len(lasfiles)
   for i in range(len(lasfiles)):
-      info = subprocess.run(['lasinfo', '--xml', sys.argv[1] + "/" + lasfiles[i]], stdout=subprocess.PIPE)
-      # Parse xml
-      root = et.fromstring(info.stdout)
+      # info = subprocess.run(['lasinfo', '--xml', sys.argv[1] + "/" + lasfiles[i]], stdout=subprocess.PIPE)
+      # going to try with pdal instead
+      info = subprocess.run(['pdal', 'info', sys.argv[1] + "/" + lasfiles[i], "--metadata"], stdout=subprocess.PIPE)
+
+      # decode stdout from bytestring and convert to a dictionary
+      json_result = json.loads(info.stdout.decode())
+
+      # # Parse xml
+      # root = et.fromstring(info.stdout)
+
       # Coordinate reference system
-      crs[i] = root.find("header").find("srs").find("wkt").text
+      # crs[i] = root.find("header").find("srs").find("wkt").text
+      crs[i] = json_result["metadata"]["srs"]["wkt"]
 
   # Set only contains unique
   if(len(set(crs)) > 1):
@@ -60,7 +70,7 @@ def lasOpen(lasDir, h5file):
       
   return (xl, yl, zl, crs[0])
         
-def surfXtract(traj, xl, yl, zl, wavel):
+def surfXtract(traj, xl, yl, zl, wavel, operation='median'):
   srf = np.zeros(len(traj.GetPoints()))
   for i, point in enumerate(traj.GetPoints()):
     xt = point[0]
@@ -71,15 +81,22 @@ def surfXtract(traj, xl, yl, zl, wavel):
     if(len(surfZ) == 0):
       srf[i] = np.nan
     else:
-      srf[i] = np.mean(surfZ)
-  
+      if operation == "median":
+        srf[i] = np.median(surfZ)
+      elif operation == "mean":
+        srf[i] = np.mean(surfZ)
+      print(i,srf[i])
   return srf
 
 def main():
+  print(sys.argv[1],sys.argv[2], sys.argv[3])
+
   xl,yl,zl,crs = lasOpen(sys.argv[1], sys.argv[2])
-  
-  f = h5py.File(sys.argv[2], "r+")
-  
+  operation = sys.argv[3]     # take median or mean of lidar fresnel zone elevations
+
+  #f = h5py.File(sys.argv[2], "r+")
+  f = h5py.File(sys.argv[2], "r")
+
   if("nav0" in f["ext"].keys()):
       trajR = f["ext"]["nav0"]
   else: # Use loc0 from raw
@@ -100,12 +117,12 @@ def main():
   traj.AssignSpatialReference(isrs)
   traj.TransformTo(osrs)
 
-  srf = surfXtract(traj, xl, yl, zl, wavel)
+  srf = surfXtract(traj, xl, yl, zl, wavel, operation)
   
-  srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
-  srf0.attrs.create("Unit", np.string_("Meters above MSL"))
-  srf0.attrs.create("Source", np.string_("OIB LIDAR"))
-  f.close()
+  #srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
+  #srf0.attrs.create("Unit", np.string_("Meters above WGS84 Ellipsoid"))
+  #srf0.attrs.create("Source", np.string_("OIB LIDAR " + str(operation.upper()) + " FRESNEL ZONE ELEV"))
+  #f.close()
   print(sys.argv[2])
 
   

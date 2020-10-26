@@ -6,18 +6,20 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-year=2015
-#ipfix=/zippy/MARS/targ/supl/UAF/$year/hdf5
-#cpfix=/zippy/MARS/code/xped/hfproc/drv
-ipfix=/silo/data/akOIB/colugo/$year/hdf5
-cpfix=/home/mchristo/proj/akOIB/hfproc/drv
+ncore=36
+
+year=2017
+ipfix=/zippy/MARS/targ/supl/UAF/$year/hdf5
+cpfix=/zippy/MARS/code/xped/hfproc/drv
+#ipfix=/silo/data/akOIB/colugo/$year/hdf5
+#cpfix=/home/mchristo/proj/akOIB/hfproc/drv
 
 for p in $ipfix/*.h5;
 do
     echo "python $cpfix/pulseCompress.py $p" >> ./job.txt
 done
 
-parallel -j 6 < ./job.txt
+parallel -j $ncore < ./job.txt
 
 rm job.txt
 

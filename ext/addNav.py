@@ -25,9 +25,23 @@ def navIngest(dir):
   files.sort()
 
   for file in files:
-    ndata = np.loadtxt(file, skiprows = 1, usecols = (0,1,2,3))
-    
-    # Extract YYYY/MM/DD
+    # read in .pos data file
+    cols = ["tod", "lat", "lon", "h"] #, "roll", "pitch", "hdg"]
+    nav = pd.read_csv(file, header=0, names=cols, delimiter=" ", usecols=cols)
+
+    #try:
+    #  ndata = np.loadtxt(file, skiprows = 1, usecols = (0,1,2,3))
+
+    #except :
+    #  with open(file,"r") as f:
+    #    # get header
+    #    header=f.readline().strip().split()
+    #    #  read data rows into numpy array
+    #    ndata = np.array([readrow(row,len(header)) for row in f])
+    #  # drop rows with missing data
+    #  ndata=ndata[np.argwhere(ndata[:,1]!=0)]
+
+    # Extract YYYY/MM/DD from file name
     fn = file.split('/')[-1]
     print(fn)
     year = 2000 + int(fn[0:2])
@@ -40,21 +54,22 @@ def navIngest(dir):
     s = int((t - epoch).total_seconds())
 
     # Open and concatenate all files in order
-    full = np.empty((len(ndata)), dtype=np.uint64)
-    frac = np.empty((len(ndata)), dtype=np.double)
+    full = np.empty((len(nav)), dtype=np.uint64)
+    frac = np.empty((len(nav)), dtype=np.double)
     prevtod = -1
     rollover = 0
+
     for i in range(len(full)):
-      frac[i] = ndata[i,0]%1
-      todfull = int(ndata[i,0])
+      frac[i] = nav["tod"][i]%1
+      todfull = int(nav["tod"][i])
       if(todfull < prevtod): # If day rolls over then add a days worth of seconds
         rollover = 86400
       prevtod = todfull
       full[i] = s + todfull + rollover
 
-    lats = np.append(lats, ndata[:,1])
-    lons = np.append(lons, ndata[:,2])
-    alts = np.append(alts, ndata[:,3])
+    lats = np.append(lats, nav["lat"].to_numpy())
+    lons = np.append(lons, nav["lon"].to_numpy())
+    alts = np.append(alts, nav["h"].to_numpy())
     fullS = np.append(fullS, full)
     fracS = np.append(fracS, frac)
 
@@ -62,7 +77,7 @@ def navIngest(dir):
 
 def navCalc(time, fix):
   # Sample nav arrays at Ettus time points, linearly interpolate for inexact match
-  
+
   minFull = min(fix[0])
   lidarTime = np.subtract(fix[0], minFull)
   lidarTime = np.add(lidarTime, fix[1])
@@ -85,14 +100,22 @@ def navCalc(time, fix):
 
   return nav
 
+def readrow(row, cols):
+  # read text file from string to handle rows with missing data
+  a = np.fromstring(row,sep=" ")
+  a.resize((cols,))
+  return a
+
 def main():
   # Maybe just loop over all files in here so ingest is not redone for each
   # Or seperate ingester and make intermediate product to use
 
   navdir = sys.argv[1]
-  fix = navIngest(navdir)
-  
   fdir = sys.argv[2]
+  print("Nav Directory: " + navdir)
+  print("Data Directory: " + fdir)
+  print()
+  fix = navIngest(navdir)
   for path in os.listdir(fdir):
       if(path.endswith(".h5")):
         print(path)

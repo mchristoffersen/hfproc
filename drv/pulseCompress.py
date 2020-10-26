@@ -178,7 +178,7 @@ def main():
   sig = f["raw"]["tx0"].attrs["Signal"]
 
   fn = sys.argv[1].split('/')[-1]
-  dt = datetime.datetime.strptime(fn, '%Y%m%d_%H%M%S.h5')
+  dt = datetime.datetime.strptime(fn, '%Y%m%d-%H%M%S.h5')
   secv = (dt-datetime.datetime(1970,1,1)).total_seconds()
   
   if(sig != b"chirp"):
@@ -187,6 +187,18 @@ def main():
     print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
     #print("Non-chirp signal:\n\t" + sys.argv[1])
     #print(f["raw"]["tx0"].attrs["Signal"])
+    # Save processed dataset
+    avgw = 250
+    if(rx0.shape[1] > avgw):
+      rx0 = removeSlidingMeanFFT(rx0, avgw)
+    else:
+      rx0 = removeMean(rx0)
+
+    pc = rx0
+    proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
+    proc0[:] = pc.astype(np.complex64)
+    proc0.attrs.create("Notes", np.string_("Mean removed in sliding {} trace window".format(avgw)))
+    f.close()
     exit()
 
   rx0 = f["raw"]["rx0"][:]
@@ -205,13 +217,13 @@ def main():
 
   print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, shiftPC, rx0.shape[1]))
   # Circular shift to correct for hardware delay - done in raw2h5 conversions now
-#  rx0 = np.roll(rx0, -shift, axis=0)
+  #  rx0 = np.roll(rx0, -shift, axis=0)
 
   avgw = 250
-  #if(rx0.shape[1] > avgw):
-  #  rx0 = removeSlidingMeanFFT(rx0, avgw)
-  #else:
-  #  rx0 = removeMean(rx0)
+  if(rx0.shape[1] > avgw):
+    rx0 = removeSlidingMeanFFT(rx0, avgw)
+  else:
+    rx0 = removeMean(rx0)
 
   # Analytic signal
   rx0 = hilbert(rx0, axis=0)

@@ -81,12 +81,13 @@ def parseRaw(fname):
   dd["trlen"] = dt * dd["spt"]
 
   for i in range(dd["ntrace"]):
-    dd["tfull"][i] = int(time[i].value)
-    dd["tfrac"][i] = time[i].value - int(time[i].value)
+    print(time[i])
+    dd["tfull"][i] = int(time[i].value/10e9)
+    dd["tfrac"][i] = time[i].value/10e9 - int(time[i].value/10e9)
 
   # Handle offset changes over 2015, 2016, 2017 campaigns
   fn = sys.argv[1].split('/')[-1]
-  dt = datetime.datetime.strptime(fn, '%Y%m%d_%H%M%S.h5')
+  date = datetime.strptime(fn, '%Y%m%d-%H%M%S.mat')
 
   # 2015 - May
   if(date.year == 2015 and date.month == 5):

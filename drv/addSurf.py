@@ -6,13 +6,14 @@ import numpy as np
 import sys
 
 def main():
-  print(sys.argv[1])
   c = 299792458 # Speed of light at STP
-  f = h5py.File(sys.argv[1], 'a')
+  fname = sys.argv[1]
+  f = h5py.File(fname, 'a')
   ext = f["ext"]
 
   # Check if srf0 and nav0 datasets exist, bail if not
   if("srf0" in ext.keys() and "nav0" in ext.keys()):
+    print(fname)
     elev_surf = ext["srf0"][:]
     elev_air =  ext["nav0"]["altM"][:]
 
@@ -25,8 +26,7 @@ def main():
 
   else:
     f.close()
-    print(sys.argv[1] + " surface pick creation failed." + list(ext.keys()[0]))
-
+    print(fname + " no surface pick created:")
 
 main()
 

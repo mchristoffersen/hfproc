@@ -22,6 +22,9 @@ def main():
       loc0 = f["raw"]["loc0"][:]
       loc0 = [(lon, lat, elev) for (lat, lon, elev, dop, nsat) in loc0]
 
+      #loc0 = f["ext"]["nav0"][:]
+      #loc0 = [(lon, lat, elev) for (lat, lon, elev) in loc0]
+
       row["geometry"] = LineString(loc0)
       row["radar"] = "LoWRES"
       tstart = f["raw"]["time0"][0]
