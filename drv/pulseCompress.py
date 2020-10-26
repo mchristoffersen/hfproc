@@ -3,6 +3,7 @@ import numpy as np
 import sys
 from scipy.signal import hilbert
 import matplotlib.pyplot as plt
+import datetime
 
 def pulseCompress(rx0, refchirp):
   if(len(rx0.shape) == 1):
@@ -123,7 +124,8 @@ def baseChirp(tlen, cf, bw, fs):
 
     return c
 
-def findOffset(rx0, refchirp, cf, fs):
+def findOffsetPC(rx0, refchirp, cf, fs):
+  # Find offset 
   # Get mean trace
   mt = np.mean(rx0, axis=1)
 
@@ -139,6 +141,22 @@ def findOffset(rx0, refchirp, cf, fs):
   pkLoc = np.argmax(np.abs(mtPC))
 
   return (pkLoc - len(mt)//2)
+
+def findOffsetDT(rx0):
+  # Find offset with time derivative. 
+  # Get mean trace
+  mt = np.mean(rx0, axis=1)
+
+  # Gradient
+  dmt = np.gradient(mt)
+
+  # Standard deviation
+  std = np.std(dmt)
+
+  # Find first place with slope > 1 std dev
+  pkLoc = np.argmax(np.abs(dmt) > std)
+
+  return pkLoc
 
 def baseband(sig, cf, fs):
   # Baseband traces to the frequency cf
@@ -157,9 +175,24 @@ def main():
   f = h5py.File(sys.argv[1], 'r+')
 
   rx0 = f["raw"]["rx0"][:]
-  cf = f["raw"]["tx0"].attrs["chirpCenterFrequency-Hz"]
-  bw = f["raw"]["tx0"].attrs["chirpBandwidth-Pct"]
-  tl = f["raw"]["tx0"].attrs["chirpLength-S"]
+  sig = f["raw"]["tx0"].attrs["Signal"]
+
+  fn = sys.argv[1].split('/')[-1]
+  dt = datetime.datetime.strptime(fn, '%Y%m%d_%H%M%S.h5')
+  secv = (dt-datetime.datetime(1970,1,1)).total_seconds()
+  
+  if(sig != b"chirp"):
+    shiftDT = findOffsetDT(rx0)
+    #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
+    print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
+    #print("Non-chirp signal:\n\t" + sys.argv[1])
+    #print(f["raw"]["tx0"].attrs["Signal"])
+    exit()
+
+  rx0 = f["raw"]["rx0"][:]
+  cf = f["raw"]["tx0"].attrs["CenterFrequency-Hz"]
+  bw = f["raw"]["tx0"].attrs["Bandwidth-Pct"]
+  tl = f["raw"]["tx0"].attrs["Length-S"]
   fs = f["raw"]["rx0"].attrs["samplingFrequency-Hz"]
 
   ### Process data
@@ -167,16 +200,18 @@ def main():
   refchirp = baseChirp(tl, cf, bw, fs)
 
   # Find hardware delay with outgoing wave
-#  shift = findOffset(rx0, refchirp, cf, fs)
-#  print("%s,%d,%d" % (sys.argv[1].split('/')[-1], shift, rx0.shape[1]))
+  shiftDT = findOffsetDT(rx0)
+  shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
+
+  print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, shiftPC, rx0.shape[1]))
   # Circular shift to correct for hardware delay - done in raw2h5 conversions now
 #  rx0 = np.roll(rx0, -shift, axis=0)
 
   avgw = 250
-  if(rx0.shape[1] > avgw):
-    rx0 = removeSlidingMeanFFT(rx0, avgw)
-  else:
-    rx0 = removeMean(rx0)
+  #if(rx0.shape[1] > avgw):
+  #  rx0 = removeSlidingMeanFFT(rx0, avgw)
+  #else:
+  #  rx0 = removeMean(rx0)
 
   # Analytic signal
   rx0 = hilbert(rx0, axis=0)
@@ -193,6 +228,6 @@ def main():
   proc0.attrs.create("RefChirp", np.string_("/raw/tx0"))
   proc0.attrs.create("Notes", np.string_("Mean removed in sliding {} trace window".format(avgw)))
   f.close()
-  print(sys.argv[1])
+  #print(sys.argv[1])
 
 main()

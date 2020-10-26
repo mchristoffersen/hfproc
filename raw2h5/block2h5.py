@@ -1,41 +1,65 @@
-import sys, h5py, nptdms
+import sys, h5py, scipy.io
 import numpy as np
+import scipy.signal as spsig
+import scipy.stats as spstat
+import matplotlib.pyplot as plt
 from h5build import h5build
 from datetime import datetime, timedelta
+import pandas as pd
 
-def tdmsSlice(data, spt, bark, spb):
-  # Number of samples total
-  # Samples per trace
-  # Bark (boolean)
-  # Samples per bark
-  # Returns ch0 chirp data
-  if(int(spt) != spt or int(spb) != spb):
-    print("Non-integer spt or spb in tdms slice")
-    sys.exit()
-    
-  spt = int(spt)
-  spb = int(spb)
-    
-  ntrace = len(data)/spt
-  
-  if(int(ntrace) != ntrace):
-    print("TDMS slicing error")
-    sys.exit()
-    
-  ntrace = int(ntrace)
-  rx0 = np.reshape(data, (spt,ntrace), order='F')
-  
-  # Spt contains spb. Chirp data len is spt-spb
-  rx0 = rx0[spb*bark:,:]
-  
-  return rx0
-  
-  
 def parseRaw(fname):
   dd = {}
 
-  fd = nptdms.TdmsFile(fname)
+  fd = scipy.io.loadmat(fname)
+  #fd = h5py.File(fname, 'r')
 
+  ch0 = fd["block"]["ch0"][0][0]
+  lat = fd["block"]["lat"][0][0]
+  lon = fd["block"]["lon"][0][0]
+  elev = fd["block"]["elev_air"][0][0]
+  time = fd["block"]["time"][0][0][0]
+  time = pd.to_datetime(time-719529, unit='D')
+  dt = fd["block"]["dt"][0][0][0][0]
+
+  if("chirp" in fd["block"].keys()):
+    sig = "chirp"
+  elif("wvrrm" in fd["block"].keys()):
+    if(fd["block"]["wvfrm"] == "uaf-mono"):
+      sig = "impulse"
+    elif(fd["block"]["wvfrm"] == "utig-mono"):
+      sig = "tone"
+  else:
+    print("Can't find TX signal info")
+    sys.exit(1)
+
+  #tr = np.sum(ch0, axis=1)
+  # High pass in fast time
+  #[b, a] = spsig.butter(4, 1.25e6, btype='highpass', fs=1.0/dt)
+  #tr = scipy.signal.filtfilt(b, a, tr)
+
+  #plt.plot(tr)
+  #plt.show()
+  
+  #f, t, sxx = spsig.spectrogram(tr, fs=1.0/dt, window="blackmanharris",
+  #                              nperseg=256, noverlap=220)
+  #plt.imshow(sxx)
+  #plt.hist(sxx.flatten())
+  #plt.show()
+
+  #plt.boxplot(sxx.flatten())
+  #plt.show()
+
+  #dscr = spstat.describe(sxx.flatten())
+  #cut = dscr[2] + 25*dscr[3]
+  #print(cut)
+
+  #plt.pcolormesh(t/1e-6, f/1e6, sxx, shading='gouraud')
+  #plt.ylabel('Frequency [MHz]')
+  #plt.xlabel('Time [usec]')
+  #plt.title(fname.split('/')[-1])
+  #plt.show()
+  #sys.exit()
+"""
   try:
     fd["meta"]
   except:
@@ -150,42 +174,24 @@ def parseRaw(fname):
     dd["alt"][i] = elev[i]
     dd["dop"][i] = -1
     dd["nsat"][i] = -1
-
-  # Rotate out HW delay
-  date = datetime.utcfromtimestamp(dd["tfull"][i] + dd["tfrac"][i])
-
-  if(date.year != 2018 and date.month not in (5,8)):
-    print("Unknown tdms data source")
-    sys.exit(1)
-
-  # Handle offset changes over campaign
-  # May is constant, but a split in Aug
-  if(date.month == 5):
-    dd["rx0"] = np.roll(dd["rx0"], -14, axis=0)
-  elif(date.month == 8 and date.day in (17,18,19,20)):
-    dd["rx0"] = np.roll(dd["rx0"], 158, axis=0)
-  elif(date.month == 8):
-    dd["rx0"] = np.roll(dd["rx0"], 14, axis=0)
-  else:
-    print("NO OFFSET CORRECTION FOUND\n\t" + fname)
-    exit()
-
+  
   return dd
+"""
 
 def main():
   dd = parseRaw(sys.argv[1])
-  outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".tdms",".h5")
-  print(outf)
-  if(dd == -1):
-    exit()
+  #outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".tdms",".h5")
+  #print(outf)
+  #if(dd == -1):
+  #  exit()
 
   # Open file
-  fd = h5py.File(outf, "w")
+  #fd = h5py.File(outf, "w")
 
-  h5build(dd, fd)
+  #h5build(dd, fd)
 
   # Some basic info at file root
-  fd.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
-  fd.close()
+  #fd.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
+  #fd.close()
 
 main()

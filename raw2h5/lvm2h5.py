@@ -1,41 +1,124 @@
-import sys, h5py, nptdms
+import sys, h5py
 import numpy as np
 from h5build import h5build
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import scipy.signal
 
-def tdmsSlice(data, spt, bark, spb):
-  # Number of samples total
-  # Samples per trace
-  # Bark (boolean)
-  # Samples per bark
-  # Returns ch0 chirp data
-  if(int(spt) != spt or int(spb) != spb):
-    print("Non-integer spt or spb in tdms slice")
-    sys.exit()
-    
-  spt = int(spt)
-  spb = int(spb)
-    
-  ntrace = len(data)/spt
-  
-  if(int(ntrace) != ntrace):
-    print("TDMS slicing error")
-    sys.exit()
-    
-  ntrace = int(ntrace)
-  rx0 = np.reshape(data, (spt,ntrace), order='F')
-  
-  # Spt contains spb. Chirp data len is spt-spb
-  rx0 = rx0[spb*bark:,:]
-  
-  return rx0
-  
-  
+def sigID(ch0, dt):
+  mt = np.mean(ch0, axis=1)
+  mt = scipy.signal.hilbert(mt)
+
+  # Bandpass
+  [b, a] = scipy.signal.butter(4, (1.25e6, 7.5e6), btype='bandpass', fs=1.0/dt)
+  mt = scipy.signal.filtfilt(b, a, mt)
+
+  MT = np.fft.fft(mt)
+  mtf = np.fft.fftfreq(len(mt), dt)
+
+  avgf = np.average(mtf, weights=np.abs(MT))
+  print(avgf)
+  plt.plot(mtf, np.abs(MT))
+  plt.show()
+  sys.exit()
+
+ 
+def sliceLVM(rdata):
+  lvm = {}
+
+  # File header fields
+  fhdf = ["Writer_Version", "Reader_Version", "Separator",
+         "Decimal_Separator", "Multi_Headings", "X_Columns",
+         "Time_Pref", "Date", "Time"]
+  # End of header
+  eoh = "***End_of_Header***"
+  # Data header fields
+  dhdf = ["Channels", "Samples", "Date", "Time",
+          "X_Dimension", "X0", "Delta_X"]
+
+  indhd = False
+
+  toks = rdata.split() # tokenize
+
+  # Make sure this is a lvm file
+  if(toks[0] != "LabVIEW" or toks[1] != "Measurement"):
+    print("Invalid file - not LVM format")
+    sys.exit(1)
+
+  sepd = {"Tab":'\t'}
+
+  ### Parse file header
+  i = 2
+  while True:
+    if(toks[i] == eoh):
+      break
+    if(toks[i] in fhdf):
+      lvm[toks[i]] = toks[i+1]
+      i += 2
+    else:
+      print("Unknown field - %s" % toks[i])
+      sys.exit(1)
+
+  sep = sepd[lvm["Separator"]]
+  print(lvm)
+
+  ### Parse data headers and data
+  lvm["blocks"] = []
+  blks = rdata.split('\n\n')
+  blks = list(filter(None, blks)) 
+
+  # Assume all blocks have the same # of channels and samples
+  blk = blks[i+1]
+  hdr, data = blk.split(eoh)
+  hdr = hdr.split("\n")
+  nch = int(hdr[0].split(sep)[1])
+  nsamp = int(hdr[1].split(sep)[1])
+  ntrace = len(blks)-1
+  dt = float(data.split("\n")[2].split()[7])
+
+  # Only do channel 0 for now
+  ch0 = np.zeros((nsamp, ntrace))
+  lat = np.zeros(ntrace)
+  lon = np.zeros(ntrace)
+  alt = np.zeros(ntrace)
+  time = np.zeros(ntrace, dtype='|S19')
+
+  for i in range(len(blks)-1):
+    blk = blks[i+1]
+    try:
+      hdr, data = blk.split(eoh)
+    except:
+      print('blk')
+      print(blk)
+      sys.exit()
+    data = data.split("\n")
+
+    cmt = data[2].split()
+    lat[i] = cmt[2]
+    lon[i] = cmt[3]
+    alt[i] = cmt[4]
+    time[i] = cmt[5] + " " + cmt[6]
+
+    for j in range(len(data)-2):
+      samp = data[j+2].split()
+      ch0[j, i] = float(samp[0])
+
+  ### Figure out signal type
+  sigtype = sigID(ch0, dt)
+
+
+
+
+  return lvm
+
 def parseRaw(fname):
   dd = {}
 
-  fd = nptdms.TdmsFile(fname)
+  fd = open(fname, 'r')
+  rdata = fd.read()
+  sliceLVM(rdata)
 
+  """
   try:
     fd["meta"]
   except:
@@ -150,42 +233,24 @@ def parseRaw(fname):
     dd["alt"][i] = elev[i]
     dd["dop"][i] = -1
     dd["nsat"][i] = -1
-
-  # Rotate out HW delay
-  date = datetime.utcfromtimestamp(dd["tfull"][i] + dd["tfrac"][i])
-
-  if(date.year != 2018 and date.month not in (5,8)):
-    print("Unknown tdms data source")
-    sys.exit(1)
-
-  # Handle offset changes over campaign
-  # May is constant, but a split in Aug
-  if(date.month == 5):
-    dd["rx0"] = np.roll(dd["rx0"], -14, axis=0)
-  elif(date.month == 8 and date.day in (17,18,19,20)):
-    dd["rx0"] = np.roll(dd["rx0"], 158, axis=0)
-  elif(date.month == 8):
-    dd["rx0"] = np.roll(dd["rx0"], 14, axis=0)
-  else:
-    print("NO OFFSET CORRECTION FOUND\n\t" + fname)
-    exit()
-
+  """
   return dd
 
 def main():
   dd = parseRaw(sys.argv[1])
-  outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".tdms",".h5")
-  print(outf)
-  if(dd == -1):
-    exit()
+  
+  #outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".lvm",".h5")
+  #print(outf)
+  #if(dd == -1):
+  #  exit()
 
   # Open file
-  fd = h5py.File(outf, "w")
+  #fd = h5py.File(outf, "w")
 
-  h5build(dd, fd)
+  #h5build(dd, fd)
 
   # Some basic info at file root
-  fd.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
-  fd.close()
+  #fd.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
+  #fd.close()
 
 main()

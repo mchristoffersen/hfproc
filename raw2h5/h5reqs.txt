@@ -1,3 +1,39 @@
+With X2h5 function build a dict named dd with the following fields:
+
+Chirp:
+	dd["txCF"]
+	dd["txBW"]
+	dd["txlen"]
+	dd["txPRF"]
+
+Tone:
+	dd["txCF"]
+	dd["txlen"]
+	dd["txPRF"]
+
+Impulse:
+	dd["txCF"]
+	dd["txPRF"]
+
+All:
+	dd["sig"] - signal type (impulse, tone, chirp)
+
+	dd["stack"] - stacking of rx0 data
+	dd["spt"] - samples per trace
+	dd["ntrace"] - number of traces
+	dd["trlen"] - trace len in time
+	dd["fs"] - sampling frequency 
+
+	dd["rx0"] - received data array
+
+	dd["lat"] - latitude array
+	dd["lon"] - longitude array
+	dd["alt"] - altitude array
+
+	dd["tfull"] - time array full secs
+	dd["tfrac"] - time array frac secs
+
+
 From raw data file
 
 hdf5 structure:
