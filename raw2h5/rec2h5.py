@@ -80,10 +80,18 @@ def parseRaw(fname):
   dd["spt"] = dd["rx0"].shape[0]
   dd["trlen"] = dt * dd["spt"]
 
+  # Deal with duplicate times
+  timen = np.zeros(len(time))
   for i in range(dd["ntrace"]):
-    print(time[i])
-    dd["tfull"][i] = int(time[i].value/10e9)
-    dd["tfrac"][i] = time[i].value/10e9 - int(time[i].value/10e9)
+    timen[i] = time[i].value/10e9
+
+  uniq, idx = np.unique(timen, return_index=True)
+  x = np.array(range(len(timen)))
+  timen = np.interp(x, idx, uniq)
+
+  for i in range(dd["ntrace"]):
+    dd["tfull"][i] = int(timen[i])
+    dd["tfrac"][i] = timen[i] - int(timen[i])
 
   # Handle offset changes over 2015, 2016, 2017 campaigns
   fn = sys.argv[1].split('/')[-1]
