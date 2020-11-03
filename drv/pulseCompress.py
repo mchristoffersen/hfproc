@@ -196,6 +196,11 @@ def main():
       rx0 = removeMean(rx0)
 
     pc = rx0
+
+    # Add 47 sample offset for impulse trigger delay and antenna dangle
+    if(sig == b"impulse"):
+      pc = np.roll(pc, 47, axis=0)
+
     proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
     proc0[:] = pc.astype(np.complex64)
     proc0.attrs.create("Notes", np.string_("Mean removed in sliding {} trace window".format(avgw)))

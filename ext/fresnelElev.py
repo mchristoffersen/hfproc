@@ -94,15 +94,20 @@ def main():
   xl,yl,zl,crs = lasOpen(sys.argv[1], sys.argv[2])
   operation = sys.argv[3]     # take median or mean of lidar fresnel zone elevations
 
-  #f = h5py.File(sys.argv[2], "r+")
-  f = h5py.File(sys.argv[2], "r")
+  f = h5py.File(sys.argv[2], "r+")
+  #f = h5py.File(sys.argv[2], "r")
 
   if("nav0" in f["ext"].keys()):
       trajR = f["ext"]["nav0"]
   else: # Use loc0 from raw
       trajR = f["raw"]["loc0"]
 
-  wavel = 3e8/f["raw"]["tx0"].attrs["chirpCenterFrequency-Hz"]
+  sig = f["raw"]["tx0"].attrs["Signal"]
+
+  if(sig == b"chirp"):
+    wavel = 3e8/f["raw"]["tx0"].attrs["CenterFrequency-Hz"]
+  else:
+    wavel = 120
 
   isrs = osr.SpatialReference()
   isrs.ImportFromEPSG(4326) #WGS84 locations
@@ -119,10 +124,10 @@ def main():
 
   srf = surfXtract(traj, xl, yl, zl, wavel, operation)
   
-  #srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
-  #srf0.attrs.create("Unit", np.string_("Meters above WGS84 Ellipsoid"))
-  #srf0.attrs.create("Source", np.string_("OIB LIDAR " + str(operation.upper()) + " FRESNEL ZONE ELEV"))
-  #f.close()
+  srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
+  srf0.attrs.create("Unit", np.string_("Meters above WGS84 Ellipsoid"))
+  srf0.attrs.create("Source", np.string_("OIB LIDAR " + str(operation.upper()) + " FRESNEL ZONE ELEV"))
+  f.close()
   print(sys.argv[2])
 
   

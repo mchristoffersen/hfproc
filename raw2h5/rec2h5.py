@@ -83,7 +83,7 @@ def parseRaw(fname):
   # Deal with duplicate times
   timen = np.zeros(len(time))
   for i in range(dd["ntrace"]):
-    timen[i] = time[i].value/10e8
+    timen[i] = time[i].value/10e8 - 37 #TAI to UTC
 
   uniq, idx = np.unique(timen, return_index=True)
   x = np.array(range(len(timen)))

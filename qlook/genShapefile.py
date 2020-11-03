@@ -20,7 +20,12 @@ def main():
       f = h5py.File(fdir + "/" + path, 'r')
 
       loc0 = f["raw"]["loc0"][:]
-      loc0 = [(lon, lat, elev) for (lat, lon, elev, dop, nsat) in loc0]
+
+      if(len(loc0) < 2):
+        f.close()
+        continue
+
+      loc0 = [(lon, lat, elev) for (lat, lon, elev) in loc0]
 
       #loc0 = f["ext"]["nav0"][:]
       #loc0 = [(lon, lat, elev) for (lat, lon, elev) in loc0]
@@ -42,7 +47,7 @@ def main():
       row["month"] = tstart.month
       row["day"] = tstart.day
 
-      row["centerFreq"] = f["raw"]["tx0"].attrs["chirpCenterFrequency-Hz"]
+      row["centerFreq"] = f["raw"]["tx0"].attrs["CenterFrequency-Hz"]
       row["ntrace"] = f["raw"]["rx0"].attrs["numTrace"]
 
       row["fname"] = path
