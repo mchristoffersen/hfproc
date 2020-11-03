@@ -88,6 +88,7 @@ def h5build(dd, fd):
   locList = [None]*dd["ntrace"]
   for i in range(dd["ntrace"]):
     locList[i] = (dd["lat"][i], dd["lon"][i], dd["alt"][i])
+
   locList = np.array(locList, dtype=loc_t)
   loc0 = raw.create_dataset("loc0", data=locList, dtype=loc_t)
   loc0.attrs.create("CRS", np.string_("WGS84"))

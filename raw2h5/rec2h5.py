@@ -56,7 +56,6 @@ def parseRaw(fname):
   dd["lat"] = lat.astype(np.float32)
   dd["lon"] = lon.astype(np.float32)
   dd["alt"] = elev.astype(np.float32)
-  print(dd["lat"])
 
   dd["tfull"] = np.zeros(dd["ntrace"]).astype(np.uint64)
   dd["tfrac"] = np.zeros(dd["ntrace"]).astype(np.float64)
