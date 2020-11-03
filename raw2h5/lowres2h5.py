@@ -14,15 +14,17 @@ def parseRaw(fname):
 
   dd["version"] = struct.unpack('f', data[4:8])[0]
 
+  dd["sig"] = "chirp" # All LoWRES files are chirped
+
   if(dd["version"] == 1.0):
     hdr = struct.unpack("ifdddddddi", data[0:68])
    
-    dd["chirpCF"] = hdr[2]
-    dd["chirpBW"] = hdr[3]/100
-    dd["chirpLen"] = hdr[4]
-    dd["chirpAmp"] = hdr[5]
-    dd["chirpPRF"] = hdr[6]
-    dd["traceLen"] = hdr[7]
+    dd["txCF"] = hdr[2]
+    dd["txBW"] = hdr[3]/100
+    dd["txlen"] = hdr[4]
+    #dd["txAmp"] = hdr[5]
+    dd["txPRF"] = hdr[6]
+    dd["trlen"] = hdr[7]
     dd["fs"] = int(hdr[8])
     dd["stack"] = hdr[9]
     dd["spt"] = int(dd["traceLen"]*dd["fs"])
@@ -31,8 +33,8 @@ def parseRaw(fname):
     dd["lat"] = np.zeros(dd["ntrace"]).astype("float")
     dd["lon"] = np.zeros(dd["ntrace"]).astype("float")
     dd["alt"] = np.zeros(dd["ntrace"]).astype("float")
-    dd["dop"] = np.zeros(dd["ntrace"]).astype("float")
-    dd["nsat"] = np.zeros(dd["ntrace"]).astype("int32")
+    #dd["dop"] = np.zeros(dd["ntrace"]).astype("float")
+    #dd["nsat"] = np.zeros(dd["ntrace"]).astype("int32")
     dd["tfull"] = np.zeros(dd["ntrace"]).astype("int64")
     dd["tfrac"] = np.zeros(dd["ntrace"]).astype("double")
 
@@ -44,8 +46,8 @@ def parseRaw(fname):
       dd["lat"][i] = fix[4]
       dd["lon"][i] = fix[5]
       dd["alt"][i] = fix[6]
-      dd["dop"][i] = fix[7]
-      dd["nsat"][i] = fix[8]
+      #dd["dop"][i] = fix[7]
+      #dd["nsat"][i] = fix[8]
 
       dd["rx0"][:,i] = struct.unpack('f'*dd["spt"], data[ofst+56:ofst+56+dd["spt"]*4])
 

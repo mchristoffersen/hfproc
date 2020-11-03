@@ -51,16 +51,18 @@ def parseRaw(fname):
   
   startTime = root["start_time"]
   startTime = datetime.strptime(startTime, "%Y-%m-%dT%H:%M:%S.%f")
-  
-  dd["chirpCF"] = root["chirp_cf"]
-  dd["chirpBW"] = root["chirp_bw"]/100
-  dd["chirpLen"] = root["chirp_len"]
-  dd["chirpAmp"] = root["chirp_amp"]
-  dd["chirpPRF"] = root["prf"]
+
+  dd["sig"] = "chirp" # All TDMS files are chirped
+
+  dd["txCF"] = root["chirp_cf"]
+  dd["txBW"] = root["chirp_bw"]/100
+  dd["txlen"] = root["chirp_len"]
+  #dd["chirpAmp"] = root["chirp_amp"]
+  dd["txPRF"] = root["prf"]
   dd["fs"] = 1.0/root["dt"]
   dd["stack"] = root["stacking"]
   dd["spt"] = root["record_len"]
-  dd["traceLen"] = root["dt"] * dd["spt"]
+  dd["trlen"] = root["dt"] * dd["spt"]
   
   # Some files have "pulse" and not "bark"
   try:
@@ -136,8 +138,6 @@ def parseRaw(fname):
   dd["lat"] = np.zeros(dd["ntrace"]).astype("float")
   dd["lon"] = np.zeros(dd["ntrace"]).astype("float")
   dd["alt"] = np.zeros(dd["ntrace"]).astype("float")
-  dd["dop"] = np.zeros(dd["ntrace"]).astype("float")
-  dd["nsat"] = np.zeros(dd["ntrace"]).astype("int32")
   dd["tfull"] = np.zeros(dd["ntrace"]).astype("int64")
   dd["tfrac"] = np.zeros(dd["ntrace"]).astype("double")
 
@@ -148,8 +148,6 @@ def parseRaw(fname):
     dd["lat"][i] = lat[i]
     dd["lon"][i] = lon[i]
     dd["alt"][i] = elev[i]
-    dd["dop"][i] = -1
-    dd["nsat"][i] = -1
 
   # Rotate out HW delay
   date = datetime.utcfromtimestamp(dd["tfull"][i] + dd["tfrac"][i])
