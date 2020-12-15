@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 import sys
-from scipy.signal import hilbert
+from scipy.signal import hilbert, butter, filtfilt
 import matplotlib.pyplot as plt
 import datetime
 
@@ -175,7 +175,7 @@ def main():
   f = h5py.File(sys.argv[1], 'r+')
 
   rx0 = f["raw"]["rx0"][:]
-  sig = f["raw"]["tx0"].attrs["Signal"]
+  sig = f["raw"]["tx0"].attrs["signal"]
 
   fn = sys.argv[1].split('/')[-1]
   dt = datetime.datetime.strptime(fn, '%Y%m%d-%H%M%S.h5')
@@ -185,7 +185,7 @@ def main():
     print("nonchirp")
     shiftDT = findOffsetDT(rx0)
     #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
-    print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
+    #print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
     #print("Non-chirp signal:\n\t" + sys.argv[1])
     #print(f["raw"]["tx0"].attrs["Signal"])
     # Save processed dataset
@@ -208,20 +208,20 @@ def main():
     exit()
 
   rx0 = f["raw"]["rx0"][:]
-  cf = f["raw"]["tx0"].attrs["CenterFrequency-Hz"]
-  bw = f["raw"]["tx0"].attrs["Bandwidth-Pct"]
-  tl = f["raw"]["tx0"].attrs["Length-S"]
-  fs = f["raw"]["rx0"].attrs["samplingFrequency-Hz"]
+  cf = f["raw"]["tx0"].attrs["centerFrequency"]
+  bw = f["raw"]["tx0"].attrs["bandwidth"]
+  tl = f["raw"]["tx0"].attrs["length"]
+  fs = f["raw"]["rx0"].attrs["samplingFrequency"]
 
   ### Process data
   # Generate reference chirp
   refchirp = baseChirp(tl, cf, bw, fs)
 
   # Find hardware delay with outgoing wave
-  shiftDT = findOffsetDT(rx0)
-  shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
+  #shiftDT = findOffsetDT(rx0)
+  #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
 
-  print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, shiftPC, rx0.shape[1]))
+  #print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, shiftPC, rx0.shape[1]))
   # Circular shift to correct for hardware delay - done in raw2h5 conversions now
   #  rx0 = np.roll(rx0, -shift, axis=0)
 
@@ -240,11 +240,14 @@ def main():
   # Pulse compression
   pc = pulseCompress(rx0, refchirp)
 
+  # Apply filter 
+  [b, a] = butter(4, 1e6, btype='lowpass', fs=100e6)
+  pc = filtfilt(b, a, pc, axis=0)
+
   # Save processed dataset
   proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
   proc0[:] = pc.astype(np.complex64)
-  proc0.attrs.create("RefChirp", np.string_("/raw/tx0"))
-  proc0.attrs.create("Notes", np.string_("Mean removed in sliding {} trace window".format(avgw)))
+  proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window. 1 MHz low pass filter (2 MHz bandwidth) applied.".format(avgw)))
   f.close()
   #print(sys.argv[1])
 

@@ -166,8 +166,6 @@ def main():
 
   h5build(dd, fd)
 
-  # Some basic info at file root
-  #fd.attrs.create("Info", np.string_("Data acquired by the University of Texas Very Efficient Radar Very Efficient Team (VERVET) radar system"))
   fd.close()
 
 main()

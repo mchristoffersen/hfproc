@@ -12,11 +12,11 @@ def parseRaw(fname):
 
   dd = {}
 
-  dd["version"] = struct.unpack('f', data[4:8])[0]
+  ver = struct.unpack('f', data[4:8])[0]
 
   dd["sig"] = "chirp" # All LoWRES files are chirped
 
-  if(dd["version"] == 1.0):
+  if(ver == 1.0):
     hdr = struct.unpack("ifdddddddi", data[0:68])
    
     dd["txCF"] = hdr[2]
@@ -27,7 +27,7 @@ def parseRaw(fname):
     dd["trlen"] = hdr[7]
     dd["fs"] = int(hdr[8])
     dd["stack"] = hdr[9]
-    dd["spt"] = int(dd["traceLen"]*dd["fs"])
+    dd["spt"] = int(dd["trlen"]*dd["fs"])
     dd["ntrace"] = int((nb - 68)/(56 + dd["spt"]*4));
     dd["rx0"] = np.zeros((dd["spt"], dd["ntrace"])).astype("float")
     dd["lat"] = np.zeros(dd["ntrace"]).astype("float")
@@ -69,8 +69,6 @@ def main():
 
   h5build(dd, fd)
 
-  # Some basic info at file root
-  fd.attrs.create("Info", np.string_("Data acquired by the University of Arizona Long Wavelength Radio Echo Sounder (LoWRES) radar system"))
   fd.close()
 
 main()
