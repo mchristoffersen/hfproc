@@ -111,8 +111,19 @@ def parseRaw(fname):
   # Handle offset changes over 2015, 2016, 2017 campaigns
   date = datetime.utcfromtimestamp(dd["tfull"][0])
   ofcorr = np.nan
-  
-  # 2015 - May
+  # 2013 - not sure if this is totally right
+  if(date.year == 2013):
+    ofcorr = -285
+
+  # 2014 May
+  if(date.year == 2014 and date.month == 5):
+    ofcorr = -295
+
+  # 2014 Aug
+  if(date.year == 2014 and date.month == 8):
+    ofcorr = -396
+
+  # 2015 May
   if(date.year == 2015 and date.month == 5):
     if(dd["sig"] == "impulse"):
       if(date.day <= 17):
@@ -160,7 +171,7 @@ def parseRaw(fname):
     elif(date.day > 22):
       ofcorr = -364
 
-  if(ofcorr != np.nan):
+  if(not np.isnan(ofcorr)):
     dd["rx0"] = np.roll(dd["rx0"], ofcorr, axis=0)
   else:
     log.warning("No offset correction found for " + fn)

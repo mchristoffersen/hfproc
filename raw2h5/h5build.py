@@ -2,7 +2,8 @@
 import h5py
 import numpy as np
 from ddVerify import ddVerify
-import logging
+import logging as log
+import os.path
 
 def generateChirp(cf, bw, length, fs):
   if(cf == -1 or bw == -1 or length == -1 or fs == -1):
@@ -22,10 +23,18 @@ def generateChirp(cf, bw, length, fs):
 def h5build(dd, outf):
   # Verify data dictionary contents
   if(ddVerify(dd)):
-    print("Invalid data dictionary, unable to convert to hdf5")
+    log.error("Invalid data dict ", outf.split('/')[-1])
     return 1
 
-  fd = h5py.File(outf, "w")
+  if(os.path.isfile(outf)):
+    log.error("HDF5 file already exists " + outf)
+    return 1
+
+  try:
+    fd = h5py.File(outf, "w")
+  except:
+    log.error("Unable to open HDF5 file for writing " + outf)
+    return 1
 
   # Create group structure
   # |-raw

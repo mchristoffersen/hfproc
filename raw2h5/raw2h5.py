@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import rec2h5, tdms2h5, lowres2h5
 from h5build import h5build
 from datetime import datetime
-
+import matplotlib.pyplot as plt
 
 # Wrapper for raw data to HDF5 transformation
 def convert(fname, ftype, dest):
@@ -11,6 +11,8 @@ def convert(fname, ftype, dest):
   xf = xfd[ftype]
   log.info("Parsing " + fname)
   dd = xf.parseRaw(fname)
+
+  fshort = fname.split('/')[-1]
 
   if(dd == -1):
     log.error("Invalid %s data file %s", ftype, fname)
@@ -23,10 +25,18 @@ def convert(fname, ftype, dest):
 
   date = datetime.utcfromtimestamp(dd["tfull"][0])
   outf = date.strftime(dest + "/%Y%m%d-%H%M%S.h5")
+  outfshort = outf.split('/')[-1]
 
   # Build hdf5 file
+  log.info("src file %s ---> dst file %s", fshort, outfshort)
   log.info("Building HDF5 file " + outf)
-  h5build(dd, outf)
+
+  plt.imshow(dd["rx0"])
+  plt.show()
+
+  if(h5build(dd, outf)):
+    log.error("Unable to convert " + fname.split('/')[-1])
+
   log.info("Built HDF5 file " + outf.split('/')[-1])
 
   return 0
@@ -56,7 +66,7 @@ def main():
   ftype = [args.type]*len(args.data)
   dest = [args.dest]*len(args.data)
   with Pool(args.num_proc) as p:
-    p.starmap(convert, zip(args.data, ftype, dest))
+    p.starmap(convert, zip(args.data, ftype, dest), 1)
 
   return 0
 
