@@ -2,6 +2,7 @@ import sys, h5py, nptdms
 import numpy as np
 from h5build import h5build
 from datetime import datetime, timedelta
+import logging as log
 
 def tdmsSlice(data, spt, bark, spb):
   # Number of samples total
@@ -169,17 +170,3 @@ def parseRaw(fname):
     exit()
 
   return dd
-
-def main():
-  dd = parseRaw(sys.argv[1])
-  outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".tdms",".h5")
-  print(outf)
-  if(dd == -1):
-    exit()
-
-  # Build hdf5 file
-  h5build(dd, outf)
-
-  return 0
-
-main()

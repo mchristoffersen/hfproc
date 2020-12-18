@@ -2,6 +2,7 @@
 import h5py
 import numpy as np
 from ddVerify import ddVerify
+import logging
 
 def generateChirp(cf, bw, length, fs):
   if(cf == -1 or bw == -1 or length == -1 or fs == -1):

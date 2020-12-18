@@ -3,8 +3,12 @@ import numpy as np
 from h5build import h5build
 
 def parseRaw(fname):
-  fd = open(fname, 'rb')
-  data = fd.read()
+  try:
+    fd = open(fname, 'rb')
+    data = fd.read()
+  except:
+    return -1
+    
   nb = len(data)
 
   if(data[0:4] != bytes.fromhex("d0d0beef")):
@@ -55,18 +59,3 @@ def parseRaw(fname):
   dd["rx0"] = np.roll(dd["rx0"], -109, axis=0)
 
   return dd
-
-def main():
-  dd = parseRaw(sys.argv[1])
-  if(dd == -1):
-    print("Invalid lowres data file")
-    exit()
-  outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".dat",".h5")
-  print(outf)
-
-  # Build hdf5 file
-  h5build(dd, outf)
-
-  return 0
-
-main()

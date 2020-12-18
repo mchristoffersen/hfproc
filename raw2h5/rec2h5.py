@@ -3,10 +3,10 @@ import numpy as np
 import scipy.signal as spsig
 import scipy.stats as spstat
 import matplotlib.pyplot as plt
-from h5build import h5build
 from datetime import datetime, timedelta
 import os.path
 import pandas as pd
+import logging as log
 
 def findOffsetDT(rx0):
   # Find offset with time derivative. 
@@ -27,18 +27,32 @@ def findOffsetDT(rx0):
 
 def parseRaw(fname):
   dd = {}
+  fn = fname.split('/')[-1]
 
-  fd = scipy.io.loadmat(fname)
+  try:
+    fd = scipy.io.loadmat(fname)
+  except:
+    log.warning("Failed to load mat file " + fn)
+    return -1
+
+  log.debug("Loaded mat file " + fn)
 
   # Open matching signal info file and get info
   year = fname.split("/")[-1][0:4]
   cols = ["name", "sig", "cf", "bw", "len"]
-  df = pd.read_csv(os.path.dirname(fname) + "/" + year + "meta.csv", names=cols)
+  meta = os.path.dirname(fname) + "/" + year + "meta.csv"
+  if(not os.path.isfile(meta)):
+    log.warning("Metadata file does not exist " + meta)
+
+  df = pd.read_csv(meta, names=cols)
+  log.debug("Loaded metadata file " + meta)
   name = os.path.basename(fname).replace(".mat", "")
   nfo = df[df["name"] == name].reset_index()
   if(len(nfo) != 1):
-    print("Invalid metadata match:\n\t" + fname)
+    log.warning("Can't find metadata for " + fn)
     return -1
+
+  log.debug("Applied metadata from " + meta)
 
   # Ingest data from rec struct
   ch0 = fd["rec"]["ch0"][0][0]
@@ -82,7 +96,7 @@ def parseRaw(fname):
 
   # Deal with duplicate times
   timen = np.zeros(len(time))
-  print("NO TAI TO UTC CONV")
+  log.warning("No TAI to UTC conversion " + fn)
   for i in range(dd["ntrace"]):
     timen[i] = time[i].value/10e8 #- 37 #TAI to UTC
 
@@ -95,80 +109,60 @@ def parseRaw(fname):
     dd["tfrac"][i] = timen[i] - int(timen[i])
 
   # Handle offset changes over 2015, 2016, 2017 campaigns
-  date = datetime.fromtimestamp(dd["tfull"][0])
-  fn = fname.split('/')[-1]
-
+  date = datetime.utcfromtimestamp(dd["tfull"][0])
+  ofcorr = np.nan
+  
   # 2015 - May
   if(date.year == 2015 and date.month == 5):
     if(dd["sig"] == "impulse"):
       if(date.day <= 17):
-        dd["rx0"] = np.roll(dd["rx0"], -347, axis=0)
+        ofcorr = -347
       elif(date.day == 19 and date.hour == 22 and date.minute <= 34):
-        dd["rx0"] = np.roll(dd["rx0"], -147, axis=0)
+        ofcorr = -147
       else:
-        dd["rx0"] = np.roll(dd["rx0"], -172, axis=0)
+        ofcorr = -172
     elif(dd["sig"] == "chirp"):
-      dd["rx0"] = np.roll(dd["rx0"], -537, axis=0)
+      ofcorr = -537
 
   # 2015 Aug
   elif(date.year == 2015 and date.month == 8):
     if(dd["sig"] == "impulse"):
-      dd["rx0"] = np.roll(dd["rx0"], -347, axis=0)
+      ofcorr = -347
     elif(dd["sig"] == "chirp"):
-      dd["rx0"] = np.roll(dd["rx0"], -393, axis=0)
+      ofcorr = -393
 
   # 2016 May
   elif(date.year == 2016 and date.month == 5):
     if(dd["sig"] == "impulse"):
       ofst = findOffsetDT(dd["rx0"])
-      dd["rx0"] = np.roll(dd["rx0"], -ofst, axis=0)
+      ofcorr = -ofst
     elif(dd["sig"] == "chirp"):
       # This won't work for a few, need to get more granular
-      dd["rx0"] = np.roll(dd["rx0"], -570, axis=0)
+      ofcorr = -570
 
   # 2016 Aug
   elif(date.year == 2016 and date.month == 8):
     if(dd["sig"] == "impulse"):
-      dd["rx0"] = np.roll(dd["rx0"], -325, axis=0)
+      ofcorr = -325
     elif(dd["sig"] == "chirp"):
       # This won't work for a few, need to get more granular
-      dd["rx0"] = np.roll(dd["rx0"], -565, axis=0)
+      ofcorr = -565
 
   #2017 May
   elif(date.year == 2017 and date.month == 5):
-    dd["rx0"] = np.roll(dd["rx0"], -571, axis=0)
+    ofcorr = -571
 
   elif(date.year == 2017 and date.month == 8):
     if(date.day <= 16):
-      dd["rx0"] = np.roll(dd["rx0"], -370, axis=0)
+      ofcorr = -370
     elif(date.day == 22):
-      dd["rx0"] = np.roll(dd["rx0"], -477, axis=0)
+      ofcorr = -477
     elif(date.day > 22):
-      dd["rx0"] = np.roll(dd["rx0"], -364, axis=0)
+      ofcorr = -364
 
+  if(ofcorr != np.nan):
+    dd["rx0"] = np.roll(dd["rx0"], ofcorr, axis=0)
   else:
-    print("NO OFFSET CORRECTION FOUND\n\t" + fn)
-    #exit()
-
-
+    log.warning("No offset correction found for " + fn)
 
   return dd
-
-
-def main():
-  dd = parseRaw(sys.argv[1])
-  date = datetime.fromtimestamp(dd["tfull"][0])
-  outf = date.strftime(sys.argv[2] + "/%Y%m%d-%H%M%S.h5")
-
-  if(dd == -1):
-    print("Bad dd", outf)
-    exit()
-
-  print(outf)
-
-  # Build hdf5 file
-  h5build(dd, outf)
-
-  return 0
-
-main()
