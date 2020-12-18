@@ -95,7 +95,7 @@ def main():
   print(sys.argv[1],sys.argv[2], sys.argv[3])
 
   xl,yl,zl,crs = lasOpen(sys.argv[1], sys.argv[2])
-  operation = sys.argv[3]     # take median or mean of lidar fresnel zone elevations
+  #operation = sys.argv[3]     # take median or mean of lidar fresnel zone elevations
 
   f = h5py.File(sys.argv[2], "r+")
   #f = h5py.File(sys.argv[2], "r")
@@ -125,7 +125,7 @@ def main():
   traj.AssignSpatialReference(isrs)
   traj.TransformTo(osrs)
 
-  srf = surfXtract(traj, xl, yl, zl, wavel, operation)
+  srf = surfXtract(traj, xl, yl, zl, wavel)
   
   srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
   srf0.attrs.create("unit", np.string_("meter"))

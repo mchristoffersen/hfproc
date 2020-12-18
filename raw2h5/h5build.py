@@ -113,6 +113,7 @@ def h5build(dd, outf):
     timeList[i] = (dd["tfull"][i], dd["tfrac"][i])
   timeList = np.array(timeList, dtype=time_t)
   time0 = raw.create_dataset("time0", data=timeList, dtype=time_t)
+  time0.attrs.create("unit", np.string_("second"))
   time0.attrs.create("clock", np.string_("UTC seconds since midnight on 1 Jan 1970"))
 
   fd.close()
