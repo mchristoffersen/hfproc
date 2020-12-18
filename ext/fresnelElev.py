@@ -5,6 +5,8 @@ import pdal
 import xml.etree.ElementTree as et
 import pandas as pd
 import laspy.file as lasf
+import numexpr as ne
+
 
 # Input 1 is las directory
 # Input 2 is path to hdf5 file
@@ -76,7 +78,8 @@ def surfXtract(traj, xl, yl, zl, wavel, operation='median'):
     xt = point[0]
     yt = point[1]
     zt = point[2]
-    fz = (xl-xt)**2 + (yl-yt)**2 <= (zt-zl)*wavel/2 + wavel/16
+    fz = ne.evaluate("(xl-xt)**2 + (yl-yt)**2 <= (zt-zl)*wavel/2 + wavel/16")
+    #fz = (xl-xt)**2 + (yl-yt)**2 <= (zt-zl)*wavel/2 + wavel/16
     surfZ = zl[fz]
     if(len(surfZ) == 0):
       srf[i] = np.nan
@@ -85,7 +88,7 @@ def surfXtract(traj, xl, yl, zl, wavel, operation='median'):
         srf[i] = np.median(surfZ)
       elif operation == "mean":
         srf[i] = np.mean(surfZ)
-      print(i,srf[i])
+    #print(i, len(surfZ), srf[i], np.mean(surfZ), np.median(surfZ))
   return srf
 
 def main():
@@ -102,10 +105,10 @@ def main():
   else: # Use loc0 from raw
       trajR = f["raw"]["loc0"]
 
-  sig = f["raw"]["tx0"].attrs["Signal"]
+  sig = f["raw"]["tx0"].attrs["signal"]
 
   if(sig == b"chirp"):
-    wavel = 3e8/f["raw"]["tx0"].attrs["CenterFrequency-Hz"]
+    wavel = 3e8/f["raw"]["tx0"].attrs["centerFrequency"]
   else:
     wavel = 120
 
@@ -125,8 +128,8 @@ def main():
   srf = surfXtract(traj, xl, yl, zl, wavel, operation)
   
   srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
-  srf0.attrs.create("Unit", np.string_("Meters above WGS84 Ellipsoid"))
-  srf0.attrs.create("Source", np.string_("OIB LIDAR " + str(operation.upper()) + " FRESNEL ZONE ELEV"))
+  srf0.attrs.create("unit", np.string_("meter"))
+  srf0.attrs.create("verticalDatum", np.string_("WGS84 Ellipsoid"))
   f.close()
   print(sys.argv[2])
 

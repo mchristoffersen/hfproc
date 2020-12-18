@@ -241,13 +241,14 @@ def main():
   pc = pulseCompress(rx0, refchirp)
 
   # Apply filter 
-  [b, a] = butter(4, 1e6, btype='lowpass', fs=100e6)
-  pc = filtfilt(b, a, pc, axis=0)
+  #[b, a] = butter(4, 1e6, btype='lowpass', fs=100e6)
+  #pc = filtfilt(b, a, pc, axis=0)
 
   # Save processed dataset
   proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
   proc0[:] = pc.astype(np.complex64)
-  proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window. 1 MHz low pass filter (2 MHz bandwidth) applied.".format(avgw)))
+#  proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window. 1 MHz low pass filter (2 MHz bandwidth) applied.".format(avgw)))
+  proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window.".format(avgw)))
   f.close()
   #print(sys.argv[1])
 

@@ -9,7 +9,7 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-year=2017
+year=2019
 ipfix=/zippy/MARS/targ/supl/UAF/$year/hdf5
 spfix=/zippy/MARS/orig/supl/UAF/lidar/$year
 cpfix=/zippy/MARS/code/xped/hfproc/ext
@@ -20,6 +20,6 @@ do
     echo "python $cpfix/fresnelElev.py $spfix $p $math_op" >> ./job.txt
 done
 
-parallel -j 44 < ./job.txt
+parallel -j 6 < ./job.txt
 
 rm job.txt

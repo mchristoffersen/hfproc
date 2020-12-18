@@ -177,11 +177,9 @@ def main():
   if(dd == -1):
     exit()
 
-  # Open file
-  fd = h5py.File(outf, "w")
+  # Build hdf5 file
+  h5build(dd, outf)
 
-  h5build(dd, fd)
-
-  fd.close()
+  return 0
 
 main()

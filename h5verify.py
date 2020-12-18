@@ -24,40 +24,41 @@ def chkLists(lref, lchk):
 
 	return (ostat, rc, cr)
 
+def keyCheck(fd, refK, group):
+	# Check for groups in root
+	chkK = fd[group].keys()
+	diff = chkLists(refK,chkK)
+	if(diff[0]):
+		if(diff[0] in [1,3]):
+			print(group + " missing: " + str(diff[1]))
+		if(diff[0] in [2,3]):
+			print(group + " extra: " + str(diff[2]))
+		print()
+	return diff[0]
+
 def structureCheck(fd):
 	## Check that all groups, datasets, and attributes are present
-	
+
 	## Format def
-	# Groups
-	rootGRef = ["raw", "drv", "ext"]
-	rawGRef = []
-	drvGRef = ["pick"]
-	extGRef = []
-	pickGRef = []
+	rootK = ["raw", "drv", "ext"]
+	rawK = ["rx0", "tx0", "loc0", "time0"]
+	drvK = ["proc0", "clutter0", "pick"]
+	extK = ["nav0", "srf0"]
+	pickK = ["twtt_surf"]
 
-	# Datasets
-	rootDSRef = []
-	rawDSRef = ["rx0", "tx0", "loc0", "time0"]
-	drvDSRef = ["proc0", "clutter0"]
-	extDSRef = ""
+	s = 0
+	s += keyCheck(fd, rootK, '/')
+	s += keyCheck(fd, extK, '/ext')
 
-
-
-	# Check for groups in root
-	rootg = fd.keys()
-	diff = chkLists(rootgRef,rootg)
-	if(diff[0]):
-		print(diff)
-		return diff[0]
-
-	# Check for attrs in root
-
-
-	return 0
+	return s
 
 def main():
-	fd = h5py.File(sys.argv[1], 'r')
-	structureCheck(fd)
-	fd.close()
+	for i in range(len(sys.argv)-1):
+		fd = h5py.File(sys.argv[i+1], 'r')
+		print(sys.argv[i+1])
+		r = structureCheck(fd)
+		if(not r):
+			print("PASSED\n")
+		fd.close()
 
 main()

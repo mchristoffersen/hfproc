@@ -64,11 +64,9 @@ def main():
   outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".dat",".h5")
   print(outf)
 
-  # Open file
-  fd = h5py.File(outf, "w")
+  # Build hdf5 file
+  h5build(dd, outf)
 
-  h5build(dd, fd)
-
-  fd.close()
+  return 0
 
 main()

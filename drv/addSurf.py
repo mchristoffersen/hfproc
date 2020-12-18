@@ -19,9 +19,9 @@ def main():
 
     twtt_surf = 2*(elev_air - elev_surf)/c
 
+
     twtt_surf_pick = f["drv"]["pick"].require_dataset("twtt_surf", data=twtt_surf, shape=twtt_surf.shape, dtype=np.float32)
-    twtt_surf_pick.attrs.create("Unit", np.string_("Seconds"))
-    twtt_surf_pick.attrs.create("Source", np.string_("OIB LIDAR"))
+    twtt_surf_pick.attrs.create("unit", np.string_("second"))
     f.close()
 
   else:

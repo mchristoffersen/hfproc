@@ -14,7 +14,7 @@ def ddVerify(dd):
   	return 1
 
   if(dd["sig"] not in ["chirp", "impulse"]):
-  	print("Invalid sig value")
+  	print("Invalid sig value: " + dd["sig"])
   	return 1
 
   if(dd["sig"] == "chirp"):

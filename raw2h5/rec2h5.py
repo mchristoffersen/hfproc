@@ -82,8 +82,9 @@ def parseRaw(fname):
 
   # Deal with duplicate times
   timen = np.zeros(len(time))
+  print("NO TAI TO UTC CONV")
   for i in range(dd["ntrace"]):
-    timen[i] = time[i].value/10e8 - 37 #TAI to UTC
+    timen[i] = time[i].value/10e8 #- 37 #TAI to UTC
 
   uniq, idx = np.unique(timen, return_index=True)
   x = np.array(range(len(timen)))
@@ -94,8 +95,8 @@ def parseRaw(fname):
     dd["tfrac"][i] = timen[i] - int(timen[i])
 
   # Handle offset changes over 2015, 2016, 2017 campaigns
-  fn = sys.argv[1].split('/')[-1]
-  date = datetime.strptime(fn, '%Y%m%d-%H%M%S.mat')
+  date = datetime.fromtimestamp(dd["tfull"][0])
+  fn = fname.split('/')[-1]
 
   # 2015 - May
   if(date.year == 2015 and date.month == 5):
@@ -147,25 +148,27 @@ def parseRaw(fname):
 
   else:
     print("NO OFFSET CORRECTION FOUND\n\t" + fn)
-    exit()
+    #exit()
 
 
 
   return dd
-  
+
 
 def main():
   dd = parseRaw(sys.argv[1])
-  outf = sys.argv[2] + '/' + sys.argv[1].split('/')[-1].replace(".mat",".h5")
-  print(outf)
+  date = datetime.fromtimestamp(dd["tfull"][0])
+  outf = date.strftime(sys.argv[2] + "/%Y%m%d-%H%M%S.h5")
+
   if(dd == -1):
+    print("Bad dd", outf)
     exit()
 
-  # Open file
-  fd = h5py.File(outf, "w")
+  print(outf)
 
-  h5build(dd, fd)
+  # Build hdf5 file
+  h5build(dd, outf)
 
-  fd.close()
+  return 0
 
 main()

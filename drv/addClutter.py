@@ -10,12 +10,13 @@ tile sim data if sim was downsampled initially
 
 def main():
   clutterFile = sys.argv[1]
+  print(clutterFile)
   hdfFile = sys.argv[2] + "/" + clutterFile.split('/')[-1].replace("_combined.img",".h5")
   print(hdfFile)
   f = h5py.File(hdfFile, 'a')
   spt = f["raw"]["rx0"].attrs["samplesPerTrace"]
   ntrace = f["raw"]["rx0"].attrs["numTrace"]
-  fs = f["raw"]["rx0"].attrs["samplingFrequency-Hz"]
+  fs = f["raw"]["rx0"].attrs["samplingFrequency"]
   sim = np.fromfile(clutterFile,dtype=np.float32)
 
 #  # determine sim downsampling factor
@@ -33,14 +34,17 @@ def main():
   # reshape sim to match 2d radar data
   out = sim.reshape((5000,ntrace))
 
-  # Handle 50 MHz data by summing neighboring samples
   if(fs != 100e6):
-    if(fs != 50e6):
+    # Handle 50 MHz data by summing neighboring samples
+    if(fs == 50e6):
+      out = out + np.roll(out,-1,axis=0)
+      out = out[::2,:]
+    # Handle 200 MHz data by duplicating samples
+    elif(fs == 200e6):
+      out = np.repeat(out, 2, axis=0)
+    else:
       print("New fs")
       sys.exit(1)
-
-    out = out + np.roll(out,-1,axis=0)
-    out = out[::2,:]
 
   # Handle short sim with zero pad
   if(out.shape[0] < spt):

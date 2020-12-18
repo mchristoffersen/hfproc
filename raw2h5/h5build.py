@@ -18,11 +18,13 @@ def generateChirp(cf, bw, length, fs):
 
   return c
 
-def h5build(dd, fd):
+def h5build(dd, outf):
   # Verify data dictionary contents
   if(ddVerify(dd)):
     print("Invalid data dictionary, unable to convert to hdf5")
     return 1
+
+  fd = h5py.File(outf, "w")
 
   # Create group structure
   # |-raw
@@ -112,5 +114,7 @@ def h5build(dd, fd):
   timeList = np.array(timeList, dtype=time_t)
   time0 = raw.create_dataset("time0", data=timeList, dtype=time_t)
   time0.attrs.create("clock", np.string_("UTC seconds since midnight on 1 Jan 1970"))
+
+  fd.close()
 
   return 0

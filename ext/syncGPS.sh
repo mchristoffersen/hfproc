@@ -6,12 +6,12 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-year=2015
+year=2013
 npfix=/zippy/MARS/targ/supl/UAF/$year/larsen_nav
 dpfix=/zippy/MARS/targ/supl/UAF/$year/hdf5
 cpfix=/zippy/MARS/code/xped/hfproc/ext
 
-python $cpfix/addNav.py $npfix $dpfix
+python $cpfix/syncGPS.py $npfix $dpfix
 
 rm job.txt
 

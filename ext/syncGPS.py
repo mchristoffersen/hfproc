@@ -136,7 +136,6 @@ def main():
         nav = navCalc([tFull, tFrac], fix)
         nav0 = f["ext"].require_dataset("nav0", shape=nav.shape, data=nav, dtype=nav_t)
         nav0.attrs.create("CRS", np.string_("WGS84"))
-        nav0.attrs.create("Note", np.string_("Differential and IMU Correction Applied"))
 
         f.close()
 
