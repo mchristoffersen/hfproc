@@ -1,9 +1,10 @@
 import h5py
 import numpy as np
-import sys
+import sys, os
 from scipy.signal import hilbert, butter, filtfilt
 import matplotlib.pyplot as plt
-import datetime
+from datetime import datetime
+import logging as log
 
 def pulseCompress(rx0, refchirp):
   if(len(rx0.shape) == 1):
@@ -171,15 +172,14 @@ def baseband(sig, cf, fs):
 
   return sig
 
-def main():
-  f = h5py.File(sys.argv[1], 'r+')
+def proc(fn):
+  f = h5py.File(fn, 'r+')
 
   rx0 = f["raw"]["rx0"][:]
   sig = f["raw"]["tx0"].attrs["signal"]
 
-  fn = sys.argv[1].split('/')[-1]
-  dt = datetime.datetime.strptime(fn, '%Y%m%d-%H%M%S.h5')
-  secv = (dt-datetime.datetime(1970,1,1)).total_seconds()
+  dt = datetime.utcfromtimestamp(f["raw"]["time0"][0][0])
+  secv = (dt-datetime(1970,1,1)).total_seconds()
   
   if(sig != b"chirp"):
     shiftDT = findOffsetDT(rx0)
@@ -251,4 +251,30 @@ def main():
   f.close()
   #print(sys.argv[1])
 
-main()
+  return 0
+
+def main():
+  # Set up CLI
+  parser = argparse.ArgumentParser(description="Program for rolling mean removal and pulse compression of HDF5 files")
+  parser.add_argument("data", help="Data file(s)", nargs='+')
+  parser.add_argument("-n", "--num-proc", type=int, help="Number of simultaneous processes, default 1", default=1)
+  args = parser.parse_args()
+
+  # Set up logging - stick in directory with first data file
+  log.basicConfig(filename= os.path.dirname(args.data[0]) + "/genProc.log",
+                  format='%(levelname)s:%(process)d:%(message)s    %(asctime)s',
+                  level=log.INFO)
+
+  # Print warning and error to stderr
+  sh = log.StreamHandler()
+  sh.setLevel(log.WARNING)
+  sh.setFormatter(log.Formatter("%(levelname)s:%(process)d:%(message)s"))
+  log.getLogger('').addHandler(sh)
+
+  p = Pool(args.num_proc)
+  p.map(proc, args.data)
+  p.close()
+  p.join()
+
+if __name__ == "__main__":
+  main()
