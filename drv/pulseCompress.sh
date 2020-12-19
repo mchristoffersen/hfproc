@@ -8,7 +8,7 @@ touch ./job.txt
 
 ncore=36
 
-year=2013
+year=2014
 ipfix=/zippy/MARS/targ/supl/UAF/$year/hdf5
 cpfix=/zippy/MARS/code/xped/hfproc/drv
 #ipfix=/silo/data/akOIB/colugo/$year/hdf5

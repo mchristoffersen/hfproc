@@ -6,7 +6,7 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-year=2013
+year=2014
 cpfix=/zippy/MARS/code/xped/hfproc/drv
 dpfix=/zippy/MARS/targ/supl/UAF/$year/sim
 ipfix=/zippy/MARS/targ/supl/UAF/$year/hdf5

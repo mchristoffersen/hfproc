@@ -182,10 +182,9 @@ def main():
   secv = (dt-datetime.datetime(1970,1,1)).total_seconds()
   
   if(sig != b"chirp"):
-    print("nonchirp")
     shiftDT = findOffsetDT(rx0)
     #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
-    #print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
+    print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
     #print("Non-chirp signal:\n\t" + sys.argv[1])
     #print(f["raw"]["tx0"].attrs["Signal"])
     # Save processed dataset

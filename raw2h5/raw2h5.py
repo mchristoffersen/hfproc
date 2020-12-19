@@ -24,15 +24,17 @@ def convert(fname, ftype, dest):
             fname.split('/')[-1])
 
   date = datetime.utcfromtimestamp(dd["tfull"][0])
-  outf = date.strftime(dest + "/%Y%m%d-%H%M%S.h5")
-  outfshort = outf.split('/')[-1]
+  outf = dest + '/' + fshort.replace(".mat", ".h5")
+  outfshort = fshort.replace(".mat", ".h5")
+  #outf = date.strftime(dest + "/%Y%m%d-%H%M%S.h5")
+  #outfshort = outf.split('/')[-1]
 
   # Build hdf5 file
   log.info("src file %s ---> dst file %s", fshort, outfshort)
   log.info("Building HDF5 file " + outf)
 
-  plt.imshow(dd["rx0"])
-  plt.show()
+  #plt.imshow(dd["rx0"])
+  #plt.show()
 
   if(h5build(dd, outf)):
     log.error("Unable to convert " + fname.split('/')[-1])
@@ -56,17 +58,27 @@ def main():
   log.basicConfig(filename=args.dest + "/raw2h5.log",
                   format='%(levelname)s:%(process)d:%(message)s    %(asctime)s',
                   level=log.INFO)
+
+  # Print warning and error to stderr
+  sh = log.StreamHandler()
+  sh.setLevel(log.WARNING)
+  sh.setFormatter(log.Formatter("%(levelname)s:%(process)d:%(message)s"))
+  log.getLogger('').addHandler(sh)
+
   log.info("Starting raw to HDF5 conversion")
   log.info("num_proc %s", args.num_proc)
   log.info("type %s", args.type)
   log.info("dest %s", args.dest)
   log.info("data %s", args.data)
-  
+
   #Do conversion
   ftype = [args.type]*len(args.data)
   dest = [args.dest]*len(args.data)
-  with Pool(args.num_proc) as p:
-    p.starmap(convert, zip(args.data, ftype, dest), 1)
+
+  p = Pool(args.num_proc)
+  p.starmap(convert, zip(args.data, ftype, dest))
+  p.close()
+  p.join()
 
   return 0
 
