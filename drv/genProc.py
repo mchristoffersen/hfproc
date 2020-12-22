@@ -5,6 +5,8 @@ from scipy.signal import hilbert, butter, filtfilt
 import matplotlib.pyplot as plt
 from datetime import datetime
 import logging as log
+import argparse
+from multiprocessing import Pool
 
 def pulseCompress(rx0, refchirp):
   if(len(rx0.shape) == 1):
@@ -173,83 +175,94 @@ def baseband(sig, cf, fs):
   return sig
 
 def proc(fn):
-  f = h5py.File(fn, 'r+')
+  log.info("Processing " + fn)
 
-  rx0 = f["raw"]["rx0"][:]
-  sig = f["raw"]["tx0"].attrs["signal"]
-
-  dt = datetime.utcfromtimestamp(f["raw"]["time0"][0][0])
-  secv = (dt-datetime(1970,1,1)).total_seconds()
-  
-  if(sig != b"chirp"):
-    shiftDT = findOffsetDT(rx0)
-    #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
-    print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
-    #print("Non-chirp signal:\n\t" + sys.argv[1])
-    #print(f["raw"]["tx0"].attrs["Signal"])
-    # Save processed dataset
-    avgw = 250
-    if(rx0.shape[1] > avgw):
-      rx0 = removeSlidingMeanFFT(rx0, avgw)
-    else:
-      rx0 = removeMean(rx0)
-
-    pc = rx0
-
-    # Add 47 sample offset for impulse trigger delay and antenna dangle
-    if(sig == b"impulse"):
-      pc = np.roll(pc, 47, axis=0)
-
-    proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
-    proc0[:] = pc.astype(np.complex64)
-    proc0.attrs.create("Notes", np.string_("Mean removed in sliding {} trace window".format(avgw)))
-    f.close()
-    exit()
-
-  rx0 = f["raw"]["rx0"][:]
-  cf = f["raw"]["tx0"].attrs["centerFrequency"]
-  bw = f["raw"]["tx0"].attrs["bandwidth"]
-  tl = f["raw"]["tx0"].attrs["length"]
-  fs = f["raw"]["rx0"].attrs["samplingFrequency"]
-
-  ### Process data
-  # Generate reference chirp
-  refchirp = baseChirp(tl, cf, bw, fs)
-
-  # Find hardware delay with outgoing wave
-  #shiftDT = findOffsetDT(rx0)
-  #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
-
-  #print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, shiftPC, rx0.shape[1]))
-  # Circular shift to correct for hardware delay - done in raw2h5 conversions now
-  #  rx0 = np.roll(rx0, -shift, axis=0)
+  try:
+    f = h5py.File(fn, 'r+')
+  except:
+    log.error("Unable to open " + fn)
+    return 1
 
   avgw = 250
+
+  try:
+    rx0 = f["raw"]["rx0"][:]
+    sig = f["raw"]["tx0"].attrs["signal"]
+  except:
+    log.error("Cannot open raw/rx0 dataset or sig attr of raw/tx0 dataset " + fshort)
+    fd.close()
+    return 1
+
+  fshort = fn.split('/')[-1]
+  dt = datetime.utcfromtimestamp(f["raw"]["time0"][0][0])
+  secv = (dt-datetime(1970,1,1)).total_seconds()
+
+  log.info("Signal type - %s %s", sig, fshort)
+  log.info("Removing a %d trace sliding mean %s", avgw, fshort)
+
   if(rx0.shape[1] > avgw):
     rx0 = removeSlidingMeanFFT(rx0, avgw)
   else:
     rx0 = removeMean(rx0)
 
-  # Analytic signal
-  rx0 = hilbert(rx0, axis=0)
+  if(sig == b"impulse"):
+    #shiftDT = findOffsetDT(rx0)
+    #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
+    #print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, 0, rx0.shape[1]))
 
-  # Baseband the data to chirp center freq
-  rx0 = baseband(rx0, cf, fs)
+    # Save processed dataset
+    pc = rx0
 
-  # Pulse compression
-  pc = pulseCompress(rx0, refchirp)
+    # Add 47 sample offset for impulse trigger delay and antenna dangle
+    pc = np.roll(pc, 47, axis=0)
 
-  # Apply filter 
-  #[b, a] = butter(4, 1e6, btype='lowpass', fs=100e6)
-  #pc = filtfilt(b, a, pc, axis=0)
+    proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
+    proc0[:] = pc.astype(np.complex64)
+    proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window".format(avgw)))
+    f.close()
 
-  # Save processed dataset
-  proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
-  proc0[:] = pc.astype(np.complex64)
-#  proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window. 1 MHz low pass filter (2 MHz bandwidth) applied.".format(avgw)))
-  proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window.".format(avgw)))
-  f.close()
-  #print(sys.argv[1])
+  elif(sig == b"chirp"):
+    rx0 = f["raw"]["rx0"][:]
+    cf = f["raw"]["tx0"].attrs["centerFrequency"]
+    bw = f["raw"]["tx0"].attrs["bandwidth"]
+    tl = f["raw"]["tx0"].attrs["length"]
+    fs = f["raw"]["rx0"].attrs["samplingFrequency"]
+
+    ### Process data
+    # Generate reference chirp
+    refchirp = baseChirp(tl, cf, bw, fs)
+
+    # Find hardware delay with outgoing wave
+    #shiftDT = findOffsetDT(rx0)
+    #shiftPC = findOffsetPC(rx0, refchirp, cf, fs)
+    #print("%s,%s,%d,%d,%d,%d" % (sys.argv[1].split('/')[-1], sig.decode("utf-8"), secv, shiftDT, shiftPC, rx0.shape[1]))
+
+    # Analytic signal
+    rx0 = hilbert(rx0, axis=0)
+
+    # Baseband the data to chirp center freq
+    rx0 = baseband(rx0, cf, fs)
+
+    # Pulse compression
+    pc = pulseCompress(rx0, refchirp)
+
+    # Apply filter 
+    #[b, a] = butter(4, 1e6, btype='lowpass', fs=100e6)
+    #pc = filtfilt(b, a, pc, axis=0)
+
+    # Save processed dataset
+    proc0 = f["drv"].require_dataset("proc0", shape=pc.shape, dtype=np.complex64, compression="gzip", compression_opts=9, shuffle=True, fletcher32=True)
+    proc0[:] = pc.astype(np.complex64)
+    #proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window. 1 MHz low pass filter (2 MHz bandwidth) applied.".format(avgw)))
+    proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window.".format(avgw)))
+    f.close()
+
+  else:
+    log.error("No processing method for %s %s", sig, fshort)
+    f.close()
+    return 1
+
+  log.info("Processed " + fshort)
 
   return 0
 
@@ -271,10 +284,16 @@ def main():
   sh.setFormatter(log.Formatter("%(levelname)s:%(process)d:%(message)s"))
   log.getLogger('').addHandler(sh)
 
+  log.info("Starting genProc script")
+  log.info("num_proc %s", args.num_proc)
+  log.info("data %s", args.data)
+
   p = Pool(args.num_proc)
   p.map(proc, args.data)
   p.close()
   p.join()
+
+  return 0
 
 if __name__ == "__main__":
   main()
