@@ -1,11 +1,10 @@
+import logging as log, sys, argparse, os
 import h5py
 import numpy as np
 import sys, os
 from scipy.signal import hilbert, butter, filtfilt
 import matplotlib.pyplot as plt
 from datetime import datetime
-import logging as log
-import argparse
 from multiprocessing import Pool
 
 def pulseCompress(rx0, refchirp):

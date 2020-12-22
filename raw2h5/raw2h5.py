@@ -1,4 +1,4 @@
-import logging as log, sys, argparse
+import logging as log, sys, argparse, os
 from multiprocessing import Pool
 import rec2h5, tdms2h5, lowres2h5
 from h5build import h5build
@@ -18,10 +18,10 @@ def convert(fname, ftype, dest):
     log.error("Invalid %s data file %s", ftype, fname)
     return 1
 
-  log.info("Created data dict " + fname.split('/')[-1])
+  log.info("Created data dict " + os.path.basename(fname))
   log.info("File info (signal,%s) (ntrace,%d) %s",
             dd["sig"], dd["ntrace"],
-            fname.split('/')[-1])
+            os.path.basename(fname))
 
   date = datetime.utcfromtimestamp(dd["tfull"][0])
   outf = dest + '/' + fshort.replace(".mat", ".h5")
@@ -37,9 +37,9 @@ def convert(fname, ftype, dest):
   #plt.show()
 
   if(h5build(dd, outf)):
-    log.error("Unable to convert " + fname.split('/')[-1])
+    log.error("Unable to convert " + os.path.basename(fname))
 
-  log.info("Built HDF5 file " + outf.split('/')[-1])
+  log.info("Built HDF5 file " + os.path.basename(outf))
 
   return 0
 
