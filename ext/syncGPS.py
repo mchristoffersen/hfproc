@@ -5,6 +5,7 @@ import sys, os
 import glob
 import datetime
 import matplotlib.pyplot as plt
+import datetime
 
 def navIngest(dir):
   # Ingest all .pos files in a directory
@@ -21,51 +22,60 @@ def navIngest(dir):
   lons = np.array([]).astype(np.float)
   alts = np.array([]).astype(np.float)
 
-  files = glob.glob(dir+"/*.pos")
+  files = glob.glob(dir+"/*.pos") + glob.glob(dir+"/*.csv")
   files.sort()
 
   for file in files:
-    # read in .pos data file
-    cols = ["tod", "lat", "lon", "h"] #, "roll", "pitch", "hdg"]
-    nav = pd.read_csv(file, header=0, names=cols, delimiter=" ", usecols=cols)
+    # read in .pos data files
+    if(file.split('.')[-1] == ".pos"):
+      cols = ["tod", "lat", "lon", "h"] #, "roll", "pitch", "hdg"]
+      nav = pd.read_csv(file, header=0, names=cols, delimiter=" ", usecols=cols)
 
-    #try:
-    #  ndata = np.loadtxt(file, skiprows = 1, usecols = (0,1,2,3))
+      # Extract YYYY/MM/DD from file name
+      fn = file.split('/')[-1]
+      print(fn)
+      year = 2000 + int(fn[0:2])
+      month = int(fn[2:4])
+      day = int(fn[4:6])
 
-    #except :
-    #  with open(file,"r") as f:
-    #    # get header
-    #    header=f.readline().strip().split()
-    #    #  read data rows into numpy array
-    #    ndata = np.array([readrow(row,len(header)) for row in f])
-    #  # drop rows with missing data
-    #  ndata=ndata[np.argwhere(ndata[:,1]!=0)]
+      # Find seconds since epoch for 00:00:00
+      epoch = datetime.datetime.utcfromtimestamp(0)
+      t = datetime.datetime(year, month, day)
+      s = int((t - epoch).total_seconds())
 
-    # Extract YYYY/MM/DD from file name
-    fn = file.split('/')[-1]
-    print(fn)
-    year = 2000 + int(fn[0:2])
-    month = int(fn[2:4])
-    day = int(fn[4:6])
+      # Open and concatenate all files in order
+      full = np.empty((len(nav)), dtype=np.uint64)
+      frac = np.empty((len(nav)), dtype=np.double)
+      prevtod = -1
+      rollover = 0
 
-    # Find seconds since epoch for 00:00:00
-    epoch = datetime.datetime.utcfromtimestamp(0)
-    t = datetime.datetime(year, month, day)
-    s = int((t - epoch).total_seconds())
+      for i in range(len(full)):
+        frac[i] = nav["tod"][i]%1
+        todfull = int(nav["tod"][i])
+        if(todfull < prevtod): # If day rolls over then add a days worth of seconds
+          rollover = 86400
+        prevtod = todfull
+        full[i] = s + todfull + rollover
 
-    # Open and concatenate all files in order
-    full = np.empty((len(nav)), dtype=np.uint64)
-    frac = np.empty((len(nav)), dtype=np.double)
-    prevtod = -1
-    rollover = 0
 
-    for i in range(len(full)):
-      frac[i] = nav["tod"][i]%1
-      todfull = int(nav["tod"][i])
-      if(todfull < prevtod): # If day rolls over then add a days worth of seconds
-        rollover = 86400
-      prevtod = todfull
-      full[i] = s + todfull + rollover
+    # read in .csv data files
+    if(file.split('.')[-1] == ".csv"):
+      cols = ["week", "jd", "sow", "lat", "lon", "h"]
+      nav = pd.read_csv(file, header=None, names=cols, delimiter=',')
+      fn = file.split('/')[-1]
+      print(fn)
+
+      epoch = datetime.datetime.utcfromtimestamp(0)
+      gps = datetime.datetime(1980, 1, 6, hour=0, minute=0, second=0)
+      
+      # Open and concatenate all files in order
+      full = np.empty((len(nav)), dtype=np.uint64)
+      frac = np.empty((len(nav)), dtype=np.double)
+
+      for i in range(len(nav)):
+        dt = datetime.timedelta(days=(nav["week"][i]*7),seconds=(nav["sow"][i]-16)) # Only 2013 data with 16 leap secs
+        full[i] = int(((gps + dt) - epoch).total_seconds()) # Only whole seconds
+        frac[i] = 0
 
     lats = np.append(lats, nav["lat"].to_numpy())
     lons = np.append(lons, nav["lon"].to_numpy())
