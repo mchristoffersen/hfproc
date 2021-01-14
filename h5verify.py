@@ -1,64 +1,135 @@
 import h5py, sys
+import argparse
 
-# Tool to verify HDF5 files, checking for errors
+# Tool to verify HDF5 files, checking for bonus/missing
+# groups/datasets/attributes and does some rule checks on
+# the data
 
-def chkLists(lref, lchk):
-	# Check set differences between lref and lchk
-	# Returns [status, [items missing from chk], 
-	# [extra items in chk]]
 
-	# Status: 0 if check is good
-	#         1 if items missing from chk
-	#         2 if extra items in chk
-	#         3 if both
+class h5Struct:
+    def __init__(self):
+        self.groups = ["raw", "drv", "ext", "drv/pick"]
+        self.dsets = [
+            "raw/rx0",
+            "raw/tx0",
+            "raw/loc0",
+            "raw/time0",
+            "drv/clutter0",
+            "drv/proc0",
+            "drv/pick/twtt_surf",
+            "ext/nav0",
+            "ext/srf0",
+        ]
+        self.attrs = {
+            "": ["institution", "instrument"],
+            "raw": [],
+            "drv": [],
+            "ext": [],
+            "drv/pick": [],
+            "raw/rx0": [
+                "numTrace",
+                "samplesPerTrace",
+                "samplingFrequency",
+                "stacking",
+                "traceLength",
+            ],
+            "raw/tx0": [
+                "signal",
+                "centerFrequency",
+                "pulseRepetitionFrequency",
+                "length",
+                "bandwidth",
+            ],
+            "raw/loc0": ["CRS"],
+            "raw/time0": ["clock"],
+            "drv/clutter0": [],
+            "drv/proc0": ["note"],
+            "drv/pick/twtt_surf": ["unit"],
+            "ext/nav0": ["CRS"],
+            "ext/srf0": ["verticalDatum", "unit"],
+        }
 
-	rc = list(set(lref) - set(lchk))
-	cr = list(set(lchk) - set(lref))
+        # Check that all groups/dsets are in attrs list
+        for group in self.groups:
+            if group not in self.attrs.keys():
+                print("\tAttribute definition missing for:", group)
+        for dset in self.dsets:
+            if dset not in self.attrs.keys():
+                print("\tAttribute definition missing for:", dset)
 
-	ostat = 0
+    def attrChk(self, name, chkAttrs, refAttrs):
+        for attr in chkAttrs:
+            if attr in refAttrs:
+                refAttrs.remove(attr)
+            else:
+                print("\tInvalid Attribute:", name + "/" + attr)
 
-	if(len(rc) > 0):
-		ostat += 1
-	if(len(cr) > 0):
-		ostat += 2
+        return
 
-	return (ostat, rc, cr)
+    def structChk(self, name, item):
+        if isinstance(item, h5py.Group):
+            if name in self.groups:
+                self.groups.remove(name)
+            else:
+                print("\tInvalid Group:", name)
+        elif isinstance(item, h5py.Dataset):
+            if name in self.dsets:
+                self.dsets.remove(name)
+            else:
+                print("\tInvalid Dataset:", name)
+        chkAttrs = list(item.attrs.keys())
+        refAttrs = self.attrs[name]
+        self.attrChk(name, chkAttrs, refAttrs)
 
-def keyCheck(fd, refK, group):
-	# Check for groups in root
-	chkK = fd[group].keys()
-	diff = chkLists(refK,chkK)
-	if(diff[0]):
-		if(diff[0] in [1,3]):
-			print(group + " missing: " + str(diff[1]))
-		if(diff[0] in [2,3]):
-			print(group + " extra: " + str(diff[2]))
-		print()
-	return diff[0]
+        return
 
-def structureCheck(fd):
-	## Check that all groups, datasets, and attributes are present
+    def chkRootAttrs(self, fd):
+        chkAttrs = list(fd.attrs.keys())
+        refAttrs = self.attrs[""]
+        self.attrChk("", chkAttrs, refAttrs)
 
-	## Format def
-	rootK = ["raw", "drv", "ext"]
-	rawK = ["rx0", "tx0", "loc0", "time0"]
-	drvK = ["proc0", "clutter0", "pick"]
-	extK = ["nav0", "srf0"]
-	pickK = ["twtt_surf"]
+        return
 
-	s = 0
-	s += keyCheck(fd, rootK, '/')
-	s += keyCheck(fd, extK, '/ext')
-
-	return s
 
 def main():
-	for i in range(len(sys.argv)-1):
-		fd = h5py.File(sys.argv[i+1], 'r')
-		print(sys.argv[i+1])
-		r = structureCheck(fd)
-		if(not r):
-			print("PASSED\n")
-		fd.close()
+    # Set up CLI
+    parser = argparse.ArgumentParser(
+        description="Program for verification of HDF5 file format and contents"
+    )
+    parser.add_argument("data", help="Data file(s)", nargs="+")
+    # parser.add_argument("-n", "--num-proc", type=int, help="Number of simultaneous processes, default 1", default=1)
+    args = parser.parse_args()
+
+    for file in args.data:
+        print("File:", file)
+
+        ## Check structure
+        vstruct = h5Struct()
+        fd = h5py.File(file, "r")
+        fd.visititems(vstruct.structChk)
+        vstruct.chkRootAttrs(fd)
+
+        for group in vstruct.groups:
+            print("\tMissing Group:", group)
+
+        for dset in vstruct.dsets:
+            print("\tMissing Dataset:", dset)
+
+        for obj in vstruct.attrs:
+          for attr in vstruct.attrs[obj]:
+            print("\tMissing Attribute:", obj + "/" + attr)
+
+        ## Check contents
+
+        # ext/nav0 has all unique values
+        nav0 = list(fd["ext/nav0"][:])
+        for i,e in enumerate(nav0):
+          nav0[i] = tuple(e)
+        if(len(nav0) != len(set(nav0))):
+          print("\tSome ext/nav0 values non-unique")
+
+        fd.close()
+        print("\n")
+
 
 main()

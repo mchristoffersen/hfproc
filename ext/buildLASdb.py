@@ -8,34 +8,36 @@ import pandas as pd
 
 h5Files = glob.glob(sys.argv[2] + "/*.h5")
 outd = {}
-outf = open(sys.argv[1] + "/lasDB.json", 'w')
-colNames = ["file","minLon","minLat","maxLon","maxLat"]
+outf = open(sys.argv[1] + "/lasDB.json", "w")
+colNames = ["file", "minLon", "minLat", "maxLon", "maxLat"]
 lasIndex = pd.read_csv(sys.argv[1] + "/lasIndex.csv", header=None, names=colNames)
 
 for file in h5Files:
-    f = h5py.File(file,'r')
+    f = h5py.File(file, "r")
     fname = file.split("/")[-1]
     print(f["raw"]["time0"][0][0])
-    startT = datetime.datetime.utcfromtimestamp(f["raw"]["time0"][0][0] + f["raw"]["time0"][0][1])
+    startT = datetime.datetime.utcfromtimestamp(
+        f["raw"]["time0"][0][0] + f["raw"]["time0"][0][1]
+    )
     utc2ak = datetime.timedelta(hours=8)
     startT = startT - utc2ak
     jday = startT.timetuple().tm_yday
-    outd.update({fname : {}})
+    outd.update({fname: {}})
 
-    if("nav0" in f["ext"].keys()):
+    if "nav0" in f["ext"].keys():
         traj = f["ext"]["nav0"][:]
-    else: # Use loc0 from raw
-      traj = f["raw"]["loc0"][:]
+    else:  # Use loc0 from raw
+        traj = f["raw"]["loc0"][:]
 
     f.close()
 
     for i, lasf in lasIndex.iterrows():
         # Check for julian day match with filename
-        if(lasf["file"].split('_')[2] != str(jday)):
-                continue
+        if lasf["file"].split("_")[2] != str(jday):
+            continue
 
         elif lasf["file"].endswith("laz"):
-            if(lasf["file"][5:8] != str(jday)):
+            if lasf["file"][5:8] != str(jday):
                 continue
 
         # See if radar file track falls within lidar file extent
@@ -45,10 +47,15 @@ for file in h5Files:
             lat = trajP[0]
             lon = trajP[1]
 
-            if(lat > lasf["minLat"] and lat < lasf["maxLat"] and lon > lasf["minLon"] and lon < lasf["maxLon"]):
+            if (
+                lat > lasf["minLat"]
+                and lat < lasf["maxLat"]
+                and lon > lasf["minLon"]
+                and lon < lasf["maxLon"]
+            ):
                 ct += 1
 
-        if(ct == 0):
+        if ct == 0:
             continue
 
         # If anything passes rough check - do fine check and save to dict
@@ -56,10 +63,15 @@ for file in h5Files:
         for trajP in traj:
             lat = trajP[0]
             lon = trajP[1]
-            if(lat > lasf["minLat"] and lat < lasf["maxLat"] and lon > lasf["minLon"] and lon < lasf["maxLon"]):
+            if (
+                lat > lasf["minLat"]
+                and lat < lasf["maxLat"]
+                and lon > lasf["minLon"]
+                and lon < lasf["maxLon"]
+            ):
                 ct += 1
         fdict = outd[fname]
-        fdict.update({lasf["file"] : ct})
+        fdict.update({lasf["file"]: ct})
 
 json.dump(outd, outf)
 outf.close()
