@@ -60,20 +60,36 @@ def genQlook(fname, outd):
 
 
 def main():
-    # Set up CLI
-    parser = argparse.ArgumentParser(
-        description="Program to create quicklook images of /drv/proc0"
-    )
-    parser.add_argument("dest", help="Output directory")
-    parser.add_argument("data", help="Data file(s)", nargs="+")
-    parser.add_argument(
-        "-n",
-        "--num-proc",
-        type=int,
-        help="Number of simultaneous processes, default 1",
-        default=1,
-    )
-    args = parser.parse_args()
+  # Set up CLI
+  parser = argparse.ArgumentParser(description="Program creating quicklook images of /drv/proc0")
+  parser.add_argument("dest", help="Output directory")
+  parser.add_argument("data", help="Data file(s)", nargs='+')
+  parser.add_argument("-n", "--num-proc", type=int, help="Number of simultaneous processes, default 1", default=1)
+  args = parser.parse_args()
+
+  # Set up logging - stick in directory with first data file
+  log.basicConfig(filename= os.path.dirname(args.dest) + "/genDataQlook.log",
+                  format='%(levelname)s:%(process)d:%(message)s    %(asctime)s',
+                  level=log.INFO)
+
+  # Print warning and error to stderr
+  sh = log.StreamHandler()
+  sh.setLevel(log.WARNING)
+  sh.setFormatter(log.Formatter("%(levelname)s:%(process)d:%(message)s"))
+  log.getLogger('').addHandler(sh)
+
+  log.info("Starting data and clutter quicklook generation")
+  log.info("num_proc %s", args.num_proc)
+  log.info("dest %s", args.dest)
+  log.info("data %s", args.data)
+
+  #Do conversion
+  outd = [args.dest]*len(args.data)
+
+  p = Pool(args.num_proc)
+  p.starmap(genQlook, zip(args.data, outd))
+  p.close()
+  p.join()
 
     # Set up logging - stick in directory with first data file
     log.basicConfig(

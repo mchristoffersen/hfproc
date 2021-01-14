@@ -6,10 +6,10 @@ touch ./job.txt
 rm -f ./job.txt
 touch ./job.txt
 
-year=2014
-cpfix=/zippy/MARS/code/xped/hfproc/drv
-dpfix=/zippy/MARS/targ/supl/UAF/$year/sim
-ipfix=/zippy/MARS/targ/supl/UAF/$year/hdf5
+year=2019
+cpfix=/zippy/MARS/code/supl/UAF/radar/hfproc/drv
+dpfix=/zippy/MARS/targ/supl/UAF/radar/$year/sim
+ipfix=/zippy/MARS/targ/supl/UAF/radar/$year/hdf5
 
 for p in $dpfix/*_combined.img;
 do
