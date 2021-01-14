@@ -3,7 +3,8 @@ import numpy as np
 import sys, os
 import matplotlib.pyplot as plt
 import argparse
-#import logging as log
+
+# import logging as log
 from multiprocessing import Pool
 from scipy.stats import mode
 from scipy.signal import hilbert
@@ -50,20 +51,22 @@ def arangeT(start, stop, fs):
 
     return seq
 
+
 def arangeT(start, stop, fs):
-    # Function to generate set of 
+    # Function to generate set of
     # Args are start time, stop time, sampling frequency
     # Generates times within the closed interval [start, stop] at 1/fs spacing
     # Double precision floating point
-    
+
     # Slow way to do this, but probably fine for the homework
     seq = np.array([]).astype(np.double)
     c = start
     while c <= stop:
-        seq = np.append(seq,c)
-        c += 1.0/fs
-        
+        seq = np.append(seq, c)
+        c += 1.0 / fs
+
     return seq
+
 
 def baseband(sig, cf, fs):
     # Baseband traces to the frequency cf
@@ -80,134 +83,161 @@ def baseband(sig, cf, fs):
 
 
 def findOffsetPC(rx0, refchirp, cf, fs):
-  # Find offset
-  # Analytic signal
-  rx0 = hilbert(rx0, axis=0)
+    # Find offset
+    # Analytic signal
+    rx0 = hilbert(rx0, axis=0)
 
-  # Baseband it
-  rx0 = baseband(rx0, cf, fs)
+    # Baseband it
+    rx0 = baseband(rx0, cf, fs)
 
-  # Cross correlate with avg trace, get peak loc
-  rx0 = np.roll(rx0, rx0.shape[0]//2, axis=0)
-  rx0 = pulseCompress(rx0, refchirp)
-  argmx = np.argmax(np.abs(rx0), axis=0)
-  rx0 = np.roll(rx0, -1*rx0.shape[0]//2, axis=0)
+    # Cross correlate with avg trace, get peak loc
+    rx0 = np.roll(rx0, rx0.shape[0] // 2, axis=0)
+    rx0 = pulseCompress(rx0, refchirp)
+    argmx = np.argmax(np.abs(rx0), axis=0)
+    rx0 = np.roll(rx0, -1 * rx0.shape[0] // 2, axis=0)
 
-  return [rx0, (mode(argmx).mode[0] - rx0.shape[0]//2)]
+    return [rx0, (mode(argmx).mode[0] - rx0.shape[0] // 2)]
+
 
 def findOffsetDT(rx0):
-  # Find offset with time derivative.
-  # Calc gradient along trace
-  grd = np.gradient(rx0, axis=0)
+    # Find offset with time derivative.
+    # Calc gradient along trace
+    grd = np.gradient(rx0, axis=0)
 
-  # Std dev
-  std = np.std(grd)
+    # Std dev
+    std = np.std(grd)
 
-  # Find first slope that is greater than 1 std from mean slope
-  argmx = np.argmax(grd > std, axis=0)
+    # Find first slope that is greater than 1 std from mean slope
+    argmx = np.argmax(grd > std, axis=0)
 
-  return mode(argmx).mode[0]
+    return mode(argmx).mode[0]
 
 
 def saveImageOffset(data, fs, name, offset):
-  print(name)
-  tbnd = 20e-6 # 20 microseconds
-  data = data[0:int(fs*tbnd),:]
-  fig = plt.figure(frameon=False)
-  data = np.abs(data) + sys.float_info.epsilon
-  im = np.log(data**2)
-  plt.imshow(im, aspect="auto", cmap='Greys_r', vmin=np.percentile(im, 60), vmax=np.percentile(im,99.5))
-  plt.axhline(y=offset, color='r', linestyle='-')
-  #plt.show()
-  plt.margins(0)
-  plt.title(str(offset))
-  plt.axis('off')
-  fig.savefig(name, dpi=500, bbox_inches = 'tight', pad_inches = 0, facecolor="w", transparent=False)
-  plt.close()
+    print(name)
+    tbnd = 20e-6  # 20 microseconds
+    data = data[0 : int(fs * tbnd), :]
+    fig = plt.figure(frameon=False)
+    data = np.abs(data) + sys.float_info.epsilon
+    im = np.log(data ** 2)
+    plt.imshow(
+        im,
+        aspect="auto",
+        cmap="Greys_r",
+        vmin=np.percentile(im, 60),
+        vmax=np.percentile(im, 99.5),
+    )
+    plt.axhline(y=offset, color="r", linestyle="-")
+    # plt.show()
+    plt.margins(0)
+    plt.title(str(offset))
+    plt.axis("off")
+    fig.savefig(
+        name,
+        dpi=500,
+        bbox_inches="tight",
+        pad_inches=0,
+        facecolor="w",
+        transparent=False,
+    )
+    plt.close()
 
-  return 0
+    return 0
+
 
 def baseChirp(tlen, cf, bw, fs):
     # Function to generate a linear basebanded chirp
     # Amplitude of 1, flat window
-    
-    i = np.complex(0,1)
-    t = arangeT(0,tlen,fs)
-    fstart = -(.5 * cf * bw)
-    b = (cf * bw)/tlen
 
-    c = np.exp(2*np.pi*i*(.5*b*np.square(t) + fstart*t))
+    i = np.complex(0, 1)
+    t = arangeT(0, tlen, fs)
+    fstart = -(0.5 * cf * bw)
+    b = (cf * bw) / tlen
+
+    c = np.exp(2 * np.pi * i * (0.5 * b * np.square(t) + fstart * t))
 
     return c
 
+
 def genQlook(fname, outd):
-  f = h5py.File(fname, 'r')
-  sig = f["raw"]["tx0"].attrs["signal"]
+    f = h5py.File(fname, "r")
+    sig = f["raw"]["tx0"].attrs["signal"]
 
-  if(sig == b"impulse"):
-    rx0 = f["raw"]["rx0"][:]
-    cf = f["raw"]["tx0"].attrs["centerFrequency"]
-    fs = f["raw"]["rx0"].attrs["samplingFrequency"]
-    shift = findOffsetDT(rx0)
+    if sig == b"impulse":
+        rx0 = f["raw"]["rx0"][:]
+        cf = f["raw"]["tx0"].attrs["centerFrequency"]
+        fs = f["raw"]["rx0"].attrs["samplingFrequency"]
+        shift = findOffsetDT(rx0)
 
-  elif(sig == b"chirp"):
-    rx0 = f["raw"]["rx0"][:]
-    cf = f["raw"]["tx0"].attrs["centerFrequency"]
-    bw = f["raw"]["tx0"].attrs["bandwidth"]
-    tl = f["raw"]["tx0"].attrs["length"]
-    fs = f["raw"]["rx0"].attrs["samplingFrequency"]
+    elif sig == b"chirp":
+        rx0 = f["raw"]["rx0"][:]
+        cf = f["raw"]["tx0"].attrs["centerFrequency"]
+        bw = f["raw"]["tx0"].attrs["bandwidth"]
+        tl = f["raw"]["tx0"].attrs["length"]
+        fs = f["raw"]["rx0"].attrs["samplingFrequency"]
 
-    refchirp = baseChirp(tl, cf, bw, fs)
-    rx0, shift = findOffsetPC(rx0, refchirp, cf, fs)
+        refchirp = baseChirp(tl, cf, bw, fs)
+        rx0, shift = findOffsetPC(rx0, refchirp, cf, fs)
 
-  # Find hardware delay with outgoing wave
+    # Find hardware delay with outgoing wave
 
-  #if(rx0.shape[1] < 20):
-  #  print("Sh
-  #  f.close()
-  #  return 1
+    # if(rx0.shape[1] < 20):
+    #  print("Sh
+    #  f.close()
+    #  return 1
 
-  saveImageOffset(rx0, fs, outd + '/' + fname.split('/')[-1].replace(".h5", "_shift.png"), shift)
-  f.close()
+    saveImageOffset(
+        rx0, fs, outd + "/" + fname.split("/")[-1].replace(".h5", "_shift.png"), shift
+    )
+    f.close()
 
-  return 0
+    return 0
+
 
 def main():
-  # Set up CLI
-  parser = argparse.ArgumentParser(description="Program creating quicklook images of /drv/proc0")
-  parser.add_argument("dest", help="Output directory")
-  parser.add_argument("data", help="Data file(s)", nargs='+')
-  parser.add_argument("-n", "--num-proc", type=int, help="Number of simultaneous processes, default 1", default=1)
-  args = parser.parse_args()
+    # Set up CLI
+    parser = argparse.ArgumentParser(
+        description="Program creating quicklook images of /drv/proc0"
+    )
+    parser.add_argument("dest", help="Output directory")
+    parser.add_argument("data", help="Data file(s)", nargs="+")
+    parser.add_argument(
+        "-n",
+        "--num-proc",
+        type=int,
+        help="Number of simultaneous processes, default 1",
+        default=1,
+    )
+    args = parser.parse_args()
 
-  # Set up logging - stick in directory with first data file
-#  log.basicConfig(filename= os.path.dirname(args.dest) + "/genDataQlook.log",
-#                  format='%(levelname)s:%(process)d:%(message)s    %(asctime)s',
-#                  level=log.INFO)
+    # Set up logging - stick in directory with first data file
+    #  log.basicConfig(filename= os.path.dirname(args.dest) + "/genDataQlook.log",
+    #                  format='%(levelname)s:%(process)d:%(message)s    %(asctime)s',
+    #                  level=log.INFO)
 
-  # Print warning and error to stderr
-#  sh = log.StreamHandler()
-#  sh.setLevel(log.WARNING)
-#  sh.setFormatter(log.Formatter("%(levelname)s:%(process)d:%(message)s"))
-#  log.getLogger('').addHandler(sh)
+    # Print warning and error to stderr
+    #  sh = log.StreamHandler()
+    #  sh.setLevel(log.WARNING)
+    #  sh.setFormatter(log.Formatter("%(levelname)s:%(process)d:%(message)s"))
+    #  log.getLogger('').addHandler(sh)
 
-#  log.info("Starting data and clutter quicklook generation")
-#  log.info("num_proc %s", args.num_proc)
-#  log.info("dest %s", args.dest)
-#  log.info("data %s", args.data)
+    #  log.info("Starting data and clutter quicklook generation")
+    #  log.info("num_proc %s", args.num_proc)
+    #  log.info("dest %s", args.dest)
+    #  log.info("data %s", args.data)
 
-  #Do conversion
-  outd = [args.dest]*len(args.data)
+    # Do conversion
+    outd = [args.dest] * len(args.data)
 
-  print(len(outd))
-  for i in range(len(outd)):
-    print("For loop", i)
-    genQlook(args.data[i], outd[i])
+    print(len(outd))
+    for i in range(len(outd)):
+        print("For loop", i)
+        genQlook(args.data[i], outd[i])
 
-  #p = Pool(args.num_proc)
-  #p.starmap(genQlook, zip(args.data, outd))
-  #p.close()
-  #p.join()
+    # p = Pool(args.num_proc)
+    # p.starmap(genQlook, zip(args.data, outd))
+    # p.close()
+    # p.join()
+
 
 main()
-

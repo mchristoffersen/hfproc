@@ -116,17 +116,17 @@ def main():
             print("\tMissing Dataset:", dset)
 
         for obj in vstruct.attrs:
-          for attr in vstruct.attrs[obj]:
-            print("\tMissing Attribute:", obj + "/" + attr)
+            for attr in vstruct.attrs[obj]:
+                print("\tMissing Attribute:", obj + "/" + attr)
 
         ## Check contents
 
         # ext/nav0 has all unique values
         nav0 = list(fd["ext/nav0"][:])
-        for i,e in enumerate(nav0):
-          nav0[i] = tuple(e)
-        if(len(nav0) != len(set(nav0))):
-          print("\tSome ext/nav0 values non-unique")
+        for i, e in enumerate(nav0):
+            nav0[i] = tuple(e)
+        if len(nav0) != len(set(nav0)):
+            print("\tSome ext/nav0 values non-unique")
 
         fd.close()
         print("\n")
