@@ -90,6 +90,11 @@ class h5Struct:
 
         return
 
+def uniqList(lst):
+    # Returns the count of non-unique elements in a list
+    for i, e in enumerate(lst):
+        lst[i] = tuple(e)
+    return len(lst)-len(set(lst))
 
 def main():
     # Set up CLI
@@ -122,11 +127,24 @@ def main():
         ## Check contents
 
         # ext/nav0 has all unique values
-        nav0 = list(fd["ext/nav0"][:])
-        for i, e in enumerate(nav0):
-            nav0[i] = tuple(e)
-        if len(nav0) != len(set(nav0)):
-            print("\tSome ext/nav0 values non-unique")
+        try:
+            nav0 = list(fd["ext/nav0"][:])
+            nuniq = uniqList(nav0)
+            if(nuniq):
+                print("\t" + str(nuniq) + "/" + str(len(nav0)) + "  ext/nav0 values non-unique")
+        except KeyError:
+            print("\tUnable to upen ext/nav0")
+
+        # raw/time0 has all unique values
+        try:
+            time0 = list(fd["raw/time0"][:])
+            nuniq = uniqList(time0)
+            if(nuniq):
+                print("\t" + str(nuniq) + "/" + str(len(time0)) + "  raw/time0 values non-unique")
+        except KeyError:
+            print("\tUnable to upen raw/time0")
+
+
 
         fd.close()
         print("\n")
