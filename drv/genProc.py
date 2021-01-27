@@ -224,8 +224,9 @@ def proc(fn):
         # Save processed dataset
         pc = rx0
 
-        # Add 47 sample offset for impulse trigger delay and antenna dangle
-        pc = np.roll(pc, 47, axis=0)
+        # Add 470 ns offset for impulse trigger delay and antenna dangle
+        nsamp = int(470e-9/(1/f["raw"]["rx0"].attrs["samplingFrequency"]))
+        pc = np.roll(pc, nsamp, axis=0)
 
         proc0 = f["drv"].require_dataset(
             "proc0",

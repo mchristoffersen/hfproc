@@ -6,10 +6,11 @@ import glob
 import datetime
 import matplotlib.pyplot as plt
 import datetime
+import argparse
 
 
-def navIngest(dir):
-    # Ingest all .pos files in a directory
+def navIngest(nav):
+    # Ingest all .pos files listed in the nav variable
     # Change UTD TOD to format of Ettus time stamp (time since Jan 1, 1970?)
     # Also GPS to UTC correction ?
     # Produce 4 arrays [fullS,...] [fracS,...] [lat,...] [lon,...] [elev,...]
@@ -22,11 +23,7 @@ def navIngest(dir):
     lons = np.array([]).astype(np.float)
     alts = np.array([]).astype(np.float)
 
-    files = glob.glob(dir + "/*.pos") + glob.glob(dir + "/*.csv")
-    files.sort()
-
-    print(files)
-    for file in files:
+    for file in nav:
         # read in .pos data files
         if file.split(".")[-1] == "pos":
             cols = ["tod", "lat", "lon", "h"]  # , "roll", "pitch", "hdg"]
@@ -116,23 +113,28 @@ def navCalc(time, fix):
     return nav
 
 
-def readrow(row, cols):
-    # read text file from string to handle rows with missing data
-    a = np.fromstring(row, sep=" ")
-    a.resize((cols,))
-    return a
-
-
 def main():
-    # Maybe just loop over all files in here so ingest is not redone for each
-    # Or seperate ingester and make intermediate product to use
+    # Set up CLI
+    parser = argparse.ArgumentParser(
+        description="Program for extraction of radar navidation from a denser GPS trajectory dataset"
+    )
+    parser.add_argument("nav", help="GPS trajectory file(s)", nargs="+")
+    parser.add_argument("data", help="Raw data file(s)", nargs="+")
+    args = parser.parse_args()
 
-    navdir = sys.argv[1]
-    fdir = sys.argv[2]
-    print("Nav Directory: " + navdir)
-    print("Data Directory: " + fdir)
-    print()
-    fix = navIngest(navdir)
+    # Sort nav and data
+    nav = []
+    data = []
+    for f in args.nav:
+        if f.split('.')[-1] == "pos":
+            nav.append(f)
+        elif f.split('.')[-1] == "h5":
+            data.append(f)
+        else:
+            print("Unknown file type:", f)
+            exit()
+    
+    fix = navIngest(nav)
     for path in os.listdir(fdir):
         if path.endswith(".h5"):
             print(path)

@@ -140,6 +140,19 @@ def main():
     srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
     srf0.attrs.create("unit", np.string_("meter"))
     srf0.attrs.create("verticalDatum", np.string_("WGS84 Ellipsoid"))
+    
+    # Add in twtt_surf dataset
+    c = 299792458  # Speed of light at STP
+
+    elev_air = ext["nav0"]["altM"][:]
+
+    twtt_surf = 2 * (elev_air - srf) / c
+
+    twtt_surf_pick = f["drv"]["pick"].require_dataset(
+        "twtt_surf", data=twtt_surf, shape=twtt_surf.shape, dtype=np.float32
+    )
+    twtt_surf_pick.attrs.create("unit", np.string_("second"))
+
     f.close()
     print(sys.argv[2])
 

@@ -27,7 +27,7 @@ def generateChirp(cf, bw, length, fs):
 def h5build(dd, outf):
     # Verify data dictionary contents
     if ddVerify(dd):
-        log.error("Invalid data dict ", outf.split("/")[-1])
+        log.error("Invalid data dict " + os.path.basename(outf))
         return 1
 
     if os.path.isfile(outf):
