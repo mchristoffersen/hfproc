@@ -23,6 +23,9 @@ def navIngest(nav):
     lons = np.array([]).astype(np.float)
     alts = np.array([]).astype(np.float)
 
+    # initialize dictionary to hold start/stop times for each nav file
+    navtimes = {}
+
     for file in nav:
         # read in .pos data files
         if file.split(".")[-1] == "pos":
@@ -86,8 +89,10 @@ def navIngest(nav):
         fullS = np.append(fullS, full)
         fracS = np.append(fracS, frac)
 
-    return (fullS, fracS, lats, lons, alts)
+        # add nav file start/stop times to dict
+        navtimes[fn] = [full[0]+frac[0], full[-1]+frac[-1]]
 
+    return (fullS, fracS, lats, lons, alts), navtimes
 
 def navCalc(time, fix):
     # Sample nav arrays at Ettus time points, linearly interpolate for inexact match
@@ -134,7 +139,7 @@ def main():
             print("Unknown file type:", f)
             exit()
     
-    fix = navIngest(nav)
+    fix, navtimes = navIngest(navdir)
     for path in os.listdir(fdir):
         if path.endswith(".h5"):
             print(path)
@@ -146,18 +151,25 @@ def main():
                 tFull[i] = time[i][0]
                 tFrac[i] = time[i][1]
 
-            # nav dataset
-            nav_t = np.dtype(
-                [("lat", np.float32), ("lon", np.float32), ("altM", np.float32)]
-            )
+            # check if radar file start/stop times fall during nav file times
+            for times in navtimes.values():
+                if ((tFull[0]+tFrac[0]) >= times[0]) and ((tFull[-1]+tFrac[-1]) <= times[-1]):
 
-            nav = navCalc([tFull, tFrac], fix)
-            nav0 = f["ext"].require_dataset(
-                "nav0", shape=nav.shape, data=nav, dtype=nav_t
-            )
-            nav0.attrs.create("CRS", np.string_("WGS84"))
+                    # nav dataset
+                    nav_t = np.dtype(
+                        [("lat", np.float32), ("lon", np.float32), ("altM", np.float32)]
+                    )
 
+                    nav = navCalc([tFull, tFrac], fix)
+                    nav0 = f["ext"].require_dataset(
+                        "nav0", shape=nav.shape, data=nav, dtype=nav_t
+                    )
+                    nav0.attrs.create("CRS", np.string_("WGS84"))
+                    
+                    # exit
+                    break
+            
+            # close file
             f.close()
-
 
 main()
