@@ -52,8 +52,8 @@ def h5build(dd, outf):
     fd.create_group("ext")
 
     # Root attrs
-    fd.attrs.create("institution", np.string_("University of Arizona"))
-    fd.attrs.create("instrument", np.string_("Arizona Radio-Echo Sounder (ARES)"))
+    fd.attrs.create("institution", np.string_(dd["institution"]))
+    fd.attrs.create("instrument", np.string_(dd["instrument"]))
 
     # rx0 dataset
     rx0 = raw.create_dataset(
@@ -115,7 +115,7 @@ def h5build(dd, outf):
         sys.exit()
 
     # loc dataset
-    loc_t = np.dtype([("lat", np.float32), ("lon", np.float32), ("altM", np.float32)])
+    loc_t = np.dtype([("lat", np.float32), ("lon", np.float32), ("hgt", np.float32)])
     locList = [None] * dd["ntrace"]
     for i in range(dd["ntrace"]):
         locList[i] = (dd["lat"][i], dd["lon"][i], dd["alt"][i])

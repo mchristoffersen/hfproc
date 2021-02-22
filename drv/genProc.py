@@ -192,8 +192,6 @@ def proc(fn):
         log.error("Unable to open " + fn)
         return 1
 
-    avgw = 250
-
     try:
         rx0 = f["raw"]["rx0"][:]
         sig = f["raw"]["tx0"].attrs["signal"]
@@ -203,6 +201,8 @@ def proc(fn):
         )
         fd.close()
         return 1
+
+    avgw = 250
 
     fshort = fn.split("/")[-1]
     dt = datetime.utcfromtimestamp(f["raw"]["time0"][0][0])
@@ -244,7 +244,6 @@ def proc(fn):
         f.close()
 
     elif sig == b"chirp":
-        rx0 = f["raw"]["rx0"][:]
         cf = f["raw"]["tx0"].attrs["centerFrequency"]
         bw = f["raw"]["tx0"].attrs["bandwidth"]
         tl = f["raw"]["tx0"].attrs["length"]

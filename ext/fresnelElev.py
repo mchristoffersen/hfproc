@@ -1,15 +1,14 @@
 import numpy as np
-import h5py, glob, sys, json, subprocess
+import h5py, glob, sys, json, subprocess, os
 from osgeo import gdal, osr, ogr
 import pdal
 import xml.etree.ElementTree as et
 import pandas as pd
 import laspy.file as lasf
 import numexpr as ne
-
-
-# Input 1 is las directory
-# Input 2 is path to hdf5 file
+import argparse
+from multiprocessing import Pool
+import logging as log
 
 # Open an hdf5 file
 # Open las db
@@ -28,11 +27,14 @@ def lasOpen(lasDir, h5file):
     # Get list of las files
     lasfiles = db[h5file.split("/")[-1]].keys()
     lasfiles = list(lasfiles)
-    print(lasfiles)
     if len(lasfiles) == 0:
-        print(h5file + " has no associated LAS files. Exiting.")
-        exit()
+        log.warning("%s has no associated LAS files", os.path.basename(h5file))
+        return ([], [], [], [])
 
+    lshort = []
+    for file in lasfiles:
+      lshort.append(os.path.basename(file))
+    log.info("%s matched to %s", os.path.basename(h5file), lshort)
     # Open and merge las files into one array
 
     f = lasf.File(lasDir + "/" + lasfiles[0], mode="r")
@@ -55,7 +57,7 @@ def lasOpen(lasDir, h5file):
         # info = subprocess.run(['lasinfo', '--xml', sys.argv[1] + "/" + lasfiles[i]], stdout=subprocess.PIPE)
         # going to try with pdal instead
         info = subprocess.run(
-            ["pdal", "info", sys.argv[1] + "/" + lasfiles[i], "--metadata"],
+            ["pdal", "info",lasDir + "/" + lasfiles[i], "--metadata"],
             stdout=subprocess.PIPE,
         )
 
@@ -71,14 +73,15 @@ def lasOpen(lasDir, h5file):
 
     # Set only contains unique
     if len(set(crs)) > 1:
-        print("Not all coordinate systems the same")
-        exit()
+        log.warning("%s not all coordinate systems the same %s", os.path.basename(h5file), lshort)
+        return 1
 
     return (xl, yl, zl, crs[0])
 
 
 def surfXtract(traj, xl, yl, zl, wavel, operation="median"):
-    srf = np.zeros(len(traj.GetPoints()))
+    srf = -9999*np.ones(len(traj.GetPoints()))
+    c = np.zeros(len(traj.GetPoints())).astype(np.uint32)
     for i, point in enumerate(traj.GetPoints()):
         xt = point[0]
         yt = point[1]
@@ -86,37 +89,35 @@ def surfXtract(traj, xl, yl, zl, wavel, operation="median"):
         fz = ne.evaluate("(xl-xt)**2 + (yl-yt)**2 <= (zt-zl)*wavel/2 + wavel/16")
         # fz = (xl-xt)**2 + (yl-yt)**2 <= (zt-zl)*wavel/2 + wavel/16
         surfZ = zl[fz]
-        if len(surfZ) == 0:
-            srf[i] = np.nan
-        else:
-            if operation == "median":
-                srf[i] = np.median(surfZ)
-            elif operation == "mean":
-                srf[i] = np.mean(surfZ)
+        c[i] = len(surfZ)
+        if len(surfZ) != 0:
+            srf[i] = np.median(surfZ)
         # print(i, len(surfZ), srf[i], np.mean(surfZ), np.median(surfZ))
-    return srf
+    return c, srf
 
 
-def main():
-    print(sys.argv[1], sys.argv[2], sys.argv[3])
+def xtractWrap(lasDir, data, odir):
+    log.info("Starting extraction for " + os.path.basename(data))
+    xl, yl, zl, crs = lasOpen(lasDir, data)
+    if(len(xl) == 0):
+        return 0
 
-    xl, yl, zl, crs = lasOpen(sys.argv[1], sys.argv[2])
-    # operation = sys.argv[3]     # take median or mean of lidar fresnel zone elevations
-
-    f = h5py.File(sys.argv[2], "r+")
-    # f = h5py.File(sys.argv[2], "r")
+    ofile = odir + '/' + data.split('/')[-1].replace(".h5", "")
+    log.info("Output will be written to " + ofile)
+    
+    f = h5py.File(data, "r+")
 
     if "nav0" in f["ext"].keys():
         trajR = f["ext"]["nav0"]
-    else:  # Use loc0 from raw
-        trajR = f["raw"]["loc0"]
+    else:
+        #trajR = f["raw"]["loc0"]
+        log.warning("No /ext/nav0 dataset found for " + os.path.basename(data))
+        f.close() # Exit because this was not during a flight
+        return 0
 
     sig = f["raw"]["tx0"].attrs["signal"]
 
-    if sig == b"chirp":
-        wavel = 3e8 / f["raw"]["tx0"].attrs["centerFrequency"]
-    else:
-        wavel = 120
+    wavel = 3e8 / f["raw"]["tx0"].attrs["centerFrequency"]
 
     isrs = osr.SpatialReference()
     isrs.ImportFromEPSG(4326)  # WGS84 locations
@@ -135,26 +136,78 @@ def main():
     traj.AssignSpatialReference(isrs)
     traj.TransformTo(osrs)
 
-    srf = surfXtract(traj, xl, yl, zl, wavel)
+    count, srf = surfXtract(traj, xl, yl, zl, wavel)
 
-    srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
-    srf0.attrs.create("unit", np.string_("meter"))
-    srf0.attrs.create("verticalDatum", np.string_("WGS84 Ellipsoid"))
-    
+    log.info("Surface extraction complete for " + os.path.basename(data))
+    # Save to csv instead of straight to hdf5 file, to skip generation later
+    np.savetxt(ofile+"_srf.csv", srf, fmt="%.3f", delimiter=',')
+    np.savetxt(ofile+"_count.csv", count, fmt="%d", delimiter=',')
+
+#    srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
+#    srf0.attrs.create("unit", np.string_("meter"))
+#    srf0.attrs.create("verticalDatum", np.string_("WGS84 Ellipsoid"))
+
+#    srf0count = f["ext"].require_dataset("srf0count", shape=count.shape, data=count, dtype=np.uint32)
+
     # Add in twtt_surf dataset
-    c = 299792458  # Speed of light at STP
+#    c = 299792458  # Speed of light at STP
 
-    elev_air = ext["nav0"]["altM"][:]
+#    elev_air = f["ext"]["nav0"]["hgt"][:]
 
-    twtt_surf = 2 * (elev_air - srf) / c
+#    twtt_surf = 2 * (elev_air - srf) / c
 
-    twtt_surf_pick = f["drv"]["pick"].require_dataset(
-        "twtt_surf", data=twtt_surf, shape=twtt_surf.shape, dtype=np.float32
-    )
-    twtt_surf_pick.attrs.create("unit", np.string_("second"))
+#    twtt_surf_pick = f["drv"]["pick"].require_dataset(
+#        "twtt_surf", data=twtt_surf, shape=twtt_surf.shape, dtype=np.float32
+#    )
+#    twtt_surf_pick.attrs.create("unit", np.string_("second"))
 
     f.close()
-    print(sys.argv[2])
+
+    return 0
+
+def main():
+    # Set up CLI
+    parser = argparse.ArgumentParser(
+        description="Program for extraction of a radar surface from a lidar dataset"
+    )
+    parser.add_argument("odir", help="Output directory for derived surface files")
+    parser.add_argument("lidar", help="Directory of lidar files and lidar DB")
+    parser.add_argument("data", help="Data file(s)", nargs="+")
+    parser.add_argument(
+        "-n",
+        "--num-proc",
+        type=int,
+        help="Number of simultaneous processes, default 1",
+        default=1,
+    )
+    args = parser.parse_args()
+    
+    # Set up logging
+    log.basicConfig(
+        filename=os.path.dirname(args.data[0]) + "/fresnelElev.log",
+        format="%(levelname)s:%(process)d:%(message)s    %(asctime)s",
+        level=log.INFO,
+    )
+
+    # Print warning and error to stderr
+    sh = log.StreamHandler()
+    sh.setLevel(log.WARNING)
+    sh.setFormatter(log.Formatter("%(levelname)s:%(process)d:%(message)s"))
+    log.getLogger("").addHandler(sh)
+    
+    log.info("Starting lidar surface extraction")
+    log.info("num_proc %s", args.num_proc)
+    log.info("odir %s", args.odir)
+    log.info("lidar %s", args.lidar)
+    log.info("data %s", args.data)
+
+    lidar = [args.lidar] * len(args.data)
+    odir = [args.odir] * len(args.data)
+
+    p = Pool(args.num_proc)
+    p.starmap(xtractWrap, zip(lidar, args.data, odir))
+    p.close()
+    p.join()
 
 
 main()
