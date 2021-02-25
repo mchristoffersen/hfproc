@@ -28,10 +28,10 @@ def convert(fname, ftype, dest):
 
     date = datetime.utcfromtimestamp(dd["tfull"][0])
     #print("FILENAME MOD")
-    #outf = dest + "/" + fshort.replace(".mat", ".h5")
-    #outfshort = fshort.replace(".mat", ".h5")
-    outf = date.strftime(dest + "/%Y%m%d-%H%M%S.h5")
-    outfshort = outf.split('/')[-1]
+    outf = dest + "/" + fshort.replace(".mat", ".h5")
+    outfshort = fshort.replace(".mat", ".h5")
+    #outf = date.strftime(dest + "/%Y%m%d-%H%M%S.h5")
+    #outfshort = outf.split('/')[-1]
 
     # Build hdf5 file
     log.info("src file %s ---> dst file %s", fshort, outfshort)

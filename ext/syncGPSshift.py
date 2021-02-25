@@ -167,13 +167,20 @@ def main():
         time = f["raw"]["time0"][:]
         tFull = np.empty((len(time)), dtype=np.uint64)
         tFrac = np.empty((len(time)), dtype=np.double)
+        dt = -696
+        log.warning("Adding " + str(dt) + "s to data time for nav xtract")
         for i in range(len(time)):
-            tFull[i] = time[i][0]
+            tFull[i] = time[i][0]+dt
             tFrac[i] = time[i][1]
 
         # check if radar file start/stop times fall during nav file times
         match = 0
         for track in tracks:
+            print(track.file)
+            fstart = tFull[0]+tFrac[0]
+            fstop = tFull[-1]+tFrac[-1]
+            print(fstart > track.startT, fstart < track.stopT)
+            print(fstart > track.startT, fstop < track.stopT)
             if ((tFull[0]+tFrac[0]) >= track.startT) and ((tFull[-1]+tFrac[-1]) <= track.stopT):
                 match = 1
                 log.info("Matched data " + os.path.basename(file) + " to track " + os.path.basename(track.file))

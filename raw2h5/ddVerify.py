@@ -1,6 +1,8 @@
 def ddVerify(dd):
     # Function to verify data dictionaries built from raw data files before transformation to hdf5
     allK = [
+        "institution",
+        "instrument",
         "sig",
         "stack",
         "spt",

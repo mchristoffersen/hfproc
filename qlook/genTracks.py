@@ -3,7 +3,7 @@ import sys, os, h5py
 from datetime import datetime
 import geopandas as gpd
 from shapely.geometry import LineString
-
+import argparse
 
 def main():
     # Maybe just loop over all files in here so ingest is not redone for each
@@ -33,19 +33,25 @@ def main():
 
             f = h5py.File(fdir + "/" + path, "r")
 
-            loc0 = f["raw"]["loc0"][:]
-
-            if len(loc0) < 2:
+            #loc0 = f["raw"]["loc0"][:]
+            if("nav0" not in f["ext"].keys()):
                 f.close()
                 continue
 
-            loc0 = [(lon, lat, elev) for (lat, lon, elev) in loc0]
+            nav0 = f["ext"]["nav0"][:]
+
+            if len(nav0) < 2:
+                f.close()
+                continue
+
+            #loc0 = [(lon, lat, elev) for (lat, lon, elev) in loc0]
+            nav0 = [(lon, lat, elev) for (lat, lon, elev) in nav0]
 
             # loc0 = f["ext"]["nav0"][:]
             # loc0 = [(lon, lat, elev) for (lat, lon, elev) in loc0]
 
-            row["geometry"] = LineString(loc0)
-            row["radar"] = "LoWRES"
+            row["geometry"] = LineString(nav0)
+            #row["radar"] = "LoWRES"
             tstart = f["raw"]["time0"][0]
             tstart = tstart[0] + tstart[1]
             tstart = datetime.utcfromtimestamp(tstart)
@@ -61,16 +67,16 @@ def main():
             row["month"] = tstart.month
             row["day"] = tstart.day
 
-            row["centerFreq"] = f["raw"]["tx0"].attrs["CenterFrequency-Hz"]
+            #row["centerFreq"] = f["raw"]["tx0"].attrs["CenterFrequency-Hz"]
             row["ntrace"] = f["raw"]["rx0"].attrs["numTrace"]
 
             row["fname"] = path
             f.close()
             gdf = gdf.append(row, ignore_index=True)
 
-    gdf.to_file(outf, layer="cities", driver="GPKG")
+    gdf.to_file(outf, layer=str(tstart.year), driver="GPKG")
 
-
+"""
 def main():
     # Set up CLI
     parser = argparse.ArgumentParser(
@@ -79,6 +85,6 @@ def main():
     parser.add_argument("dest", help="Output file")
     parser.add_argument("data", help="Data file(s)", nargs="+")
     args = parser.parse_args()
-
+"""
 
 main()

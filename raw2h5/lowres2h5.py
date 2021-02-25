@@ -61,4 +61,7 @@ def parseRaw(fname):
     dd["rx0"] = np.array(dd["rx0"]).astype(np.float32)
     dd["rx0"] = np.roll(dd["rx0"], -109, axis=0)
 
+    dd["institution"] = "University of Arizona"
+    dd["instrument"] = "Arizona Radio Echo Sounder (ARES)"
+
     return dd

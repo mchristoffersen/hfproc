@@ -170,4 +170,7 @@ def parseRaw(fname):
         print("NO OFFSET CORRECTION FOUND\n\t" + fname)
         exit()
 
+    dd["institution"] = "University of Arizona"
+    dd["instrument"] = "Arizona Radio Echo Sounder (ARES)"
+
     return dd

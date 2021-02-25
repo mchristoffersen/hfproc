@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 import sys, os
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import argparse
 import logging as log
@@ -11,7 +13,7 @@ def saveImage(data, fs, name):
     tbnd = 20e-6  # 20 microseconds
     data = data[0 : int(fs * tbnd), :]
     fig = plt.figure(frameon=False)
-    ar = 0.125
+    ar = 2
     fig.set_size_inches(data.shape[1] / 1000 / ar, data.shape[0] / 1000)
     ax = plt.Axes(fig, [0.0, 0.0, 1.0, 1.0])
     ax.set_axis_off()

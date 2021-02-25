@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import h5py
 
 ###
-dt = -1 * (12 * 60 + 35)
+dt = -437
 ###
 
 
