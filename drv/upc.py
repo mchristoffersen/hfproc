@@ -23,7 +23,7 @@ def sar(fn):
 
 	#plt.plot(np.fft.fftfreq(proc0.shape[1], 1.0/20),np.fft.fft(proc0[1275,:]))
 	#plt.show()
-	w = 100
+	w = 60
 	s = 1
 
 	nsart = int((proc0.shape[1]-w)/s)

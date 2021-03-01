@@ -179,7 +179,7 @@ def main():
                 log.info("Matched data " + os.path.basename(file) + " to track " + os.path.basename(track.file))
                 # nav dataset
                 nav_t = np.dtype(
-                    [("lat", np.float32), ("lon", np.float32), ("hgt", np.float32)]
+                    [("lat", np.float64), ("lon", np.float64), ("hgt", np.float64)]
                 )
 
                 nav = navCalc([tFull, tFrac], track)
