@@ -5,13 +5,9 @@ import sys, os
 import datetime
 import argparse
 import logging as log
+import matplotlib.pyplot as plt
 
 # TODO: change structure of this program
-# Read in nav files to individual arrays instead of one big one
-#  - also try to speed up nav file read in
-# For each radar file check which nav file it falls into and only
-# use that data for interp, not the whole array
-# Report if a radar file is outside of nav files, this is likely a test on the ground
 # Also multiprocess the nav file read in and the interpolation
 
 class Trajectory:
@@ -112,7 +108,7 @@ def navCalc(time, track):
     loni = np.interp(radarTime, lidarTime, track.lon)
     hgti = np.interp(radarTime, lidarTime, track.hgt)
 
-    nav_t = np.dtype([("lat", np.float32), ("lon", np.float32), ("hgt", np.float32)])
+    nav_t = np.dtype([("lat", np.float64), ("lon", np.float64), ("hgt", np.float64)])
 
     nav = np.empty((len(lati)), dtype=nav_t)
 
@@ -183,6 +179,7 @@ def main():
                 )
 
                 nav = navCalc([tFull, tFrac], track)
+
                 nav0 = f["ext"].require_dataset(
                     "nav0", shape=nav.shape, data=nav, dtype=nav_t
                 )
