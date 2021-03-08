@@ -23,7 +23,7 @@ def sar(fn):
 
 	#plt.plot(np.fft.fftfreq(proc0.shape[1], 1.0/20),np.fft.fft(proc0[1275,:]))
 	#plt.show()
-	w = 60
+	w = 51
 	s = 1
 
 	nsart = int((proc0.shape[1]-w)/s)
@@ -51,7 +51,7 @@ def sar(fn):
 
 	f = h5py.File(fn, "r+")
 
-	del f["drv/sar0"]
+	#del f["drv/sar0"]
 	sar0 = f["drv"].require_dataset(
 		"sar0",
 		shape=sar.shape,

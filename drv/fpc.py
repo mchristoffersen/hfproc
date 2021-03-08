@@ -6,6 +6,34 @@ from multiprocessing.pool import Pool
 import h5py
 import pyproj as prj
 
+def arangeT(start, stop, fs):
+	# Function to generate set of
+	# Args are start time, stop time, sampling frequency
+	# Generates times within the closed interval [start, stop] at 1/fs spacing
+	# Double precision floating point
+
+	# Slow way to do this, but probably fine for the homework
+	seq = np.array([]).astype(np.double)
+	c = start
+	while c <= stop:
+		seq = np.append(seq, c)
+		c += 1.0 / fs
+
+	return seq
+
+def baseChirp(tlen, cf, bw, fs):
+	# Function to generate a linear basebanded chirp
+	# Amplitude of 1, flat window
+
+	i = np.complex(0, 1)
+	t = arangeT(0, tlen, fs)
+	fstart = -(0.5 * cf * bw)
+	b = (cf * bw) / tlen
+
+	c = np.exp(2 * np.pi * i * (0.5 * b * np.square(t) + fstart * t))
+
+	return c
+
 
 def rayTime(xi, plane, subgl, nadElev, slope, n1 = 1, n2 = 1.78):
 	c = 299792458
@@ -29,16 +57,27 @@ def rayPath(plane, subgl, nadElev, slope, n1 = 1, n2 = 1.78):
 
 	x = plane[0]
 	step = 10
-	while step >= 1e-3:
+	c = 0
+	while step >= 1e-2:
+		c += 1
+		if(c >= 50e3):
+			print("plane", plane)
+			print("subgl", subgl)
+			print("nadElev", nadElev)
+			print("slope", slope)
+			return -1
 		xar = np.array([x-step, x, x+step])
 		t, y = rayTime(xar, plane, subgl, nadElev, slope)
 		if(t[0] > t[1] and t[2] > t[1]): # If min is bounded
+		#	print("bounded")
 			step = step/10
 			continue
 		if(t[0] > t[1] and t[1] > t[2]):
+		#	print("->")
 			x = x + step
 			continue
 		if(t[0] < t[1] and t[1] < t[2]):
+		#	print("<-")
 			x = x - step
 			continue
 
@@ -79,12 +118,9 @@ def dopplerFreq(plane, subgl, iface, slope, v, wv = 120, n1 = 1, n2 = 1.78):
 	
 	return fd
 
-def moving_average(a, n=3) :
-    ret = np.cumsum(a, dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1:] / n
 
 def sar(fn):
+	c = 299792458
 	try:
 		f = h5py.File(fn, "r+")
 	except Exception as e:
@@ -92,34 +128,43 @@ def sar(fn):
 		log.error(e)
 		return 1
 
+	pc0 = f["drv"]["proc0"][:]
 	nav0 = f["ext"]["nav0"][:]
 	srf0 = f["ext"]["srf0"][:]
+	prf = f["raw"]["tx0"].attrs["pulseRepetitionFrequency"]
+	cf = f["raw"]["tx0"].attrs["centerFrequency"]
+	bw = f["raw"]["tx0"].attrs["bandwidth"]
+	tlen = f["raw"]["tx0"].attrs["length"]
+	fs = f["raw"]["rx0"].attrs["samplingFrequency"]
+	stack = f["raw"]["rx0"].attrs["stacking"]
 	f.close()
+
+	# Get chirp autocorrelation
+	chirp = baseChirp(tlen, cf, bw, fs)
+	chirp = chirp*np.hanning(len(chirp))
+
+	chirp = np.append(chirp, np.zeros(pc0.shape[0] - len(chirp)))
+
+	# Autocorrelation of the chirp
+	aChirp = np.fft.ifft(np.fft.fft(chirp)*np.conj(np.fft.fft(chirp)))
+
+	tps = prf/stack
 
 	lle = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 	xyz = "+proj=geocent +ellps=WGS84 +no_defs"
 
-	lat = [lat for (lat, lon, elev) in nav0]
-	lon = [lon for (lat, lon, elev) in nav0]
-	elev = [elev for (lat, lon, elev) in nav0]
+	pLat = [lat for (lat, lon, elev) in nav0]
+	pLon = [lon for (lat, lon, elev) in nav0]
+	pElev = [elev for (lat, lon, elev) in nav0]
 
-	plt.plot(np.diff(lat))
-	plt.show()
-	print(lat[0], lon[0], elev[0])
-
-	px, py, pz = prj.transform(
-		lle, xyz,
-		lon,
-		lat,
-		elev
-	)
+	xform = prj.Transformer.from_crs(lle, xyz)
+	px, py, pz = xform.transform(pLon, pLat, pElev)
 
 	# Velocity
-	vx = moving_average(np.gradient(px), n=20)
-	vy = moving_average(np.gradient(py), n=20)
-	vz = moving_average(np.gradient(pz), n=20)
+	vx = np.gradient(px)*tps
+	vy = np.gradient(py)*tps
+	vz = np.gradient(pz)*tps
 	v = np.sqrt(vx**2 + vy**2 + vz**2)
-
 
 	# Along track distance
 	atX = np.zeros(len(px))
@@ -131,49 +176,94 @@ def sar(fn):
 		xStep[i] = np.sqrt(dx**2 + dy**2 + dz**2)
 		atX[i] = atX[i-1] + xStep[i]
 
-	#plt.plot(vx)
-	#plt.plot(vy)
-	#plt.plot(vz)
-	plt.plot(xStep)
-	plt.show()
+
+	## Focus a test chunk
+	# Get representative trajectory 
+	#chunkStart = 5800
+	#chunkStop = 7000
+	#midStart = 6500
+	#midstop = 6601
+
+
+
+	# Frame size
+	fSize = 51 # 5 seconds of samples
+	# loop over frames, do sar
+	rstart = 5800
+	rstop = 7000
+	foc = np.zeros((pc0.shape[0], rstop-rstart-fSize)).astype(np.complex64)
+	fidx = 0
+	for i in range(5800,7000-fSize,10):
+		# Get surface points, fit line to calculate surface slope
+		fSrf = srf0[i:i+fSize]
+		fAtX = atX[i:i+fSize]
+		fPz = pElev[i:i+fSize]
+		frame = pc0[:,i:i+fSize]
+
+		A = np.ones((len(fSrf), 2))
+		A[:,0] = fAtX
+		
+		x, res, rank, sing = np.linalg.lstsq(A, fSrf, rcond=None)
+
+		psi = np.degrees(np.arctan(x[0]))
+
+		midPz = fPz[fSize//2]
+		midSrfZ = fSrf[fSize//2]
+		midAtX = fAtX[fSize//2]
+		midSrfSamp = int(((2*(midPz-midSrfZ))/c)*fs)
+		rayTimes = np.zeros(len(fSrf))
+
+		# In each frame iterate over depth samples to focus returns
+		# at each range
+		stopSamp = min(pc0.shape[0], midSrfSamp+1600)
+		frameRMC = np.zeros_like(frame)
+		frameCorr = np.zeros_like(frame)
+		sarTrace = np.zeros(pc0.shape[0]).astype(np.complex64)
+		for s in range(midSrfSamp, stopSamp):
+			print(s)
+			dz = (s-midSrfSamp)*(1/fs)*(c/1.78)/2
+			for i,pLoc in enumerate(zip(fAtX, fPz)):
+				rayTimes[i], iface = rayPath(pLoc, [midAtX, midSrfZ-dz], fSrf[i], psi)
+
+
+			rSamp = (rayTimes*fs).astype(np.int32)
+			dSamp = rSamp - rSamp[fSize//2]
+
+			rayPhase = np.exp(-1*1j*2*np.pi*cf*rayTimes)
+			dPhase = rayPhase - rayPhase[fSize//2]
+			plt.plot(fAtX, np.abs(dPhase)/np.pi)
+			plt.show()
+
+			for j in range(frame.shape[1]):
+				frameCorr[:,j] = np.roll(aChirp, dSamp[j]+s)*np.exp(1j*dPhase[j])
+
+			sarTrace[s] = np.sum(np.multiply(frameCorr, frame))
+
+			#plt.imshow(np.log(np.abs(frameCorr)), aspect="auto")
+			#plt.show()
+
+			#plt.plot(np.abs(frameCorr[:,50]))
+			#plt.show()
+
+			# Range migration correction
+			#for j in range(frame.shape[1]):
+			#	frameRMC[:,j] = np.roll(frame[:,j], -1*dSamp[j])
+
+			#sarTrace[s] = np.sum(frameRMC[s,:] * np.exp(-1j*dPhase))
+
+			#if(not s%200):
+			#	plt.plot(np.abs(sarTrace)/np.max(np.abs(sarTrace)))
+			#	plt.plot(np.abs(frame[:,fSize//2])/np.max(np.abs(frame[:,fSize//2])))
+			#	plt.show()
+
+		foc[:,fidx] = sarTrace
+		fidx+=1
+		plt.imshow(np.log(np.abs(foc[:,:fidx]+.0001)), aspect="auto")
+		#plt.plot(np.abs(frame[:,fSize//2]))
+		plt.show()
 
 	return 
-	psi = 5 # slope
 
-	# Calculate ray path
-	planex = np.arange(21)*5
-	planey = 100*np.ones(21)
-	srfy = planex*np.tan(np.radians(psi))
-
-	plane = list(zip(planex, planey))
-
-	subgl = [50, -200]
-
-	tl = []
-	for i,loc in enumerate(plane):
-		t, iface = rayPath(loc, subgl, srfy[i], psi)
-		tl.append(t)
-		rayx = [loc[0], iface[0], subgl[0]]
-		rayy = [loc[1], iface[1], subgl[1]]
-		print(snellCheck(loc, subgl, iface, psi))
-		plt.plot(rayx, rayy, 'b-')
-
-
-	#plt.plot(planex, tl)
-	#plt.show()
-
-	# Plot it
-	#xb = [plane[0], subgl[0]]
-	#dx = np.max(xb) - np.min(xb)
-
-	#rayx = [plane[0], iface[0], subgl[0]]
-	#rayy = [plane[1], iface[1], subgl[1]]
-
-	plt.gca().set_aspect('equal')
-	plt.plot(subgl[0], subgl[1], 'ro')
-	#plt.plot(plane[0], plane[1], 'ro')
-	plt.plot(planex, srfy, 'g-')
-	plt.show()
 
 def main():
 	# Set up CLI
@@ -207,10 +297,11 @@ def main():
 	log.info("num_proc %s", args.num_proc)
 	log.info("data %s", args.data)
 
-	p = Pool(args.num_proc)
-	p.map(sar, args.data)
-	p.close()
-	p.join()
+	sar(args.data[0])
+	#p = Pool(args.num_proc)
+	#p.map(sar, args.data)
+	#p.close()
+	#p.join()
 
 	return 0
 
