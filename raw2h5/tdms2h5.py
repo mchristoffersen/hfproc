@@ -35,13 +35,13 @@ def tdmsSlice(data, spt, bark, spb):
 
 def parseRaw(fname):
     dd = {}
-
+    fn = fname.split("/")[-1]
     fd = nptdms.TdmsFile(fname)
 
     try:
         fd["meta"]
     except:
-        sys.stdout.write("No meta object, skipping: ")
+        log.error("No meta object, skipping " + fn)
         return -1
 
     ch0 = fd["radar"]["ch0"]  # .channel_data("radar","ch0")
@@ -86,7 +86,12 @@ def parseRaw(fname):
 
     # Extract ch0
     dd["rx0"] = tdmsSlice(ch0, dd["spt"], bark, spb)
-
+    
+    ntrace = dd["rx0"].shape[1]
+    if(ntrace < 10):
+      log.warning("Skipping " + fn + " because less than 10 traces (" + str(ntrace) + ")")
+      return -1
+    
     # Correct double length metadata error, or trim data
     if len(lat) > 2 * dd["rx0"].shape[1]:
         lat = lat[0 : len(lat) - 1 : 2]
@@ -98,10 +103,6 @@ def parseRaw(fname):
         lon = lon[0 : len(lon) - 1]
         elev = elev[0 : len(elev) - 1]
         time = time[0 : len(time) - 1]
-
-    if len(time) < 50:
-        sys.stdout.write("Less than 50 traces, skipping: ")
-        return -1
 
     # Fill in every other time value
     for i in range(len(time) - 1):
@@ -155,8 +156,8 @@ def parseRaw(fname):
     date = datetime.utcfromtimestamp(dd["tfull"][i] + dd["tfrac"][i])
 
     if date.year != 2018 and date.month not in (5, 8):
-        print("Unknown tdms data source")
-        sys.exit(1)
+        log.error("Unknown TDMS data source")
+        return -1
 
     # Handle offset changes over campaign
     # May is constant, but a split in Aug
@@ -167,8 +168,7 @@ def parseRaw(fname):
     elif date.month == 8:
         dd["rx0"] = np.roll(dd["rx0"], 14, axis=0)
     else:
-        print("NO OFFSET CORRECTION FOUND\n\t" + fname)
-        exit()
+        log.warning("No offset correction found for ")
 
     dd["institution"] = "University of Arizona"
     dd["instrument"] = "Arizona Radio Echo Sounder (ARES)"

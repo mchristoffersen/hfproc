@@ -135,7 +135,7 @@ def parseRaw(fname):
     name = os.path.basename(fname).replace(".mat", "")
     nfo = df[df["name"] == name].reset_index()
     if len(nfo) != 1:
-        log.warning("Can't find metadata for " + fn)
+        log.error("Can't find metadata for " + fn)
         return -1
 
     log.debug("Applied metadata from " + meta)
@@ -196,7 +196,7 @@ def parseRaw(fname):
     elif(date.year in [2013, 2014]):
         taio = 35
     else:
-        log.error("No TAI to UTC offset found for " + fn)
+        log.warning("No TAI to UTC offset found for " + fn)
 
     # Deal with duplicate times
     timen = np.zeros(len(time))
