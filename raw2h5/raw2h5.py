@@ -26,19 +26,21 @@ def convert(fname, ftype, dest):
         os.path.basename(fname),
     )
 
+    if(dd["sig"] == "chirp"):
+        fpfix = "IRARES1B"
+    elif(dd["sig"] == "impulse"):
+        fpfix == "IRUAFHF1B"
+    else:
+        log.error("Invalid signal type for file prefix decision")
+        return 1
+
     date = datetime.utcfromtimestamp(dd["tfull"][0])
-    #print("FILENAME MOD")
-    #outf = dest + "/" + fshort.replace(".mat", ".h5")
-    #outfshort = fshort.replace(".mat", ".h5")
-    outf = date.strftime(dest + "/%Y%m%d-%H%M%S.h5")
+    outf = date.strftime(dest + "/" + fpfix + "_%Y%m%d-%H%M%S.h5")
     outfshort = outf.split('/')[-1]
 
     # Build hdf5 file
     log.info("src file %s ---> dst file %s", fshort, outfshort)
     log.info("Building HDF5 file " + outf)
-
-    # plt.imshow(dd["rx0"])
-    # plt.show()
 
     if h5build(dd, outf):
         log.error("Unable to convert " + os.path.basename(fname))

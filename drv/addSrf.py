@@ -45,13 +45,21 @@ def main():
         f.close()
         continue
 
+    string_t = h5py.string_dtype(encoding='ascii')
+
     srf0 = f["ext"].require_dataset("srf0", shape=srf.shape, data=srf, dtype=np.float32)
     srf0[:] = srf[:]
-    srf0.attrs.create("unit", np.string_("meter"))
-    srf0.attrs.create("verticalDatum", np.string_("WGS84 Ellipsoid"))
+    srf0.attrs.create("unit", "meter", dtype=string_t)
+    srf0.attrs.create("verticalDatum", "WGS84 Ellipsoid", dtype=string_t)
+
+    description_attr = "Surface elevation derived from OIB lidar data."
+    srf0.attrs.create("description", description_attr, dtype=string_t)
 
     srf0count = f["ext"].require_dataset("srf0count", shape=count.shape, data=count, dtype=np.uint32)
     srf0count[:] = count[:]
+
+    description_attr = "Number of lidar points used for each derived surface elevation."
+    srf0count.attrs.create("description", description_attr, dtype=string_t)
 
     # Add in twtt_surf dataset
     c = 299792458  # Speed of light at STP
@@ -67,7 +75,11 @@ def main():
     )
     twtt_surf_pick[:] = twtt_surf[:]
 
-    twtt_surf_pick.attrs.create("unit", np.string_("second"))
+    twtt_surf_pick.attrs.create("unit", "second", dtype=string_t)
+
+    description_attr = "Two way travel time to the lidar derived surface in each trace inseconds.  No data value is -1.  Calculated using /ext/srf0 and /ext/nav0."
+    twtt_surf_pick.attrs.create("description", description_attr, dtype=string_t)
+    
     print(data, "WORKED")
     f.close()
 

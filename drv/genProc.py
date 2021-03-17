@@ -185,6 +185,7 @@ def baseband(sig, cf, fs):
 
 def proc(fn):
     log.info("Processing " + fn)
+    string_t = h5py.string_dtype(encoding='ascii')
 
     try:
         f = h5py.File(fn, "r+")
@@ -239,8 +240,12 @@ def proc(fn):
         )
         proc0[:] = pc.astype(np.complex64)
         proc0.attrs.create(
-            "note", np.string_("Mean removed in sliding {} trace window".format(avgw))
+            "note", "Mean removed in sliding %d trace window" % avgw, dtype=string_t
         )
+
+        description_attr = "Processed data derived from /raw/rx0. Processing varies based on transmit signal type.  The fast time axis (along-trace) is two way travel time from the airplane. Each sample is a complex-valued amplitude with the first single precision float (\"r\") being the real component and the second one (\"i\") being the imaginary component. Like the rx0 dataset this dataset does not have physical units."
+        proc0.attrs.create("description", description_attr, dtype=string_t)
+        
         f.close()
 
     elif sig == b"chirp":
@@ -285,12 +290,11 @@ def proc(fn):
         # proc0.attrs.create("note", np.string_("Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window. 1 MHz low pass filter (2 MHz bandwidth) applied.".format(avgw)))
         proc0.attrs.create(
             "note",
-            np.string_(
-                "Mean removed in sliding {} trace window. Pulse compression with ideal reference chirp, boxcar amplitude window.".format(
-                    avgw
-                )
-            ),
-        )
+            "Mean removed in sliding %d trace window. Pulse compression with ideal reference chirp, boxcar amplitude window." % avgw, dtype=string_t)
+
+        description_attr = "Processed data derived from /raw/rx0. Processing varies based on transmit signal type.  The fast time axis (along-trace) is two way travel time from the airplane. Each sample is a complex-valued amplitude with the first single precision float (\"r\") being the real component and the second one (\"i\") being the imaginary component. Like the rx0 dataset this dataset does not have physical units."
+        proc0.attrs.create("description", description_attr, dtype=string_t)
+
         f.close()
 
     else:

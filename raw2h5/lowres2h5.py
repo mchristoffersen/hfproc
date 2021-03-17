@@ -1,6 +1,7 @@
 import sys, struct, h5py
 import numpy as np
 from h5build import h5build
+import logging as log
 
 
 def parseRaw(fname):
@@ -13,6 +14,7 @@ def parseRaw(fname):
     nb = len(data)
 
     if data[0:4] != bytes.fromhex("d0d0beef"):
+        log.error("LoWRES magic bytes do not match")
         return -1
 
     dd = {}
@@ -60,8 +62,5 @@ def parseRaw(fname):
 
     dd["rx0"] = np.array(dd["rx0"]).astype(np.float32)
     dd["rx0"] = np.roll(dd["rx0"], -109, axis=0)
-
-    dd["institution"] = "University of Arizona"
-    dd["instrument"] = "Arizona Radio Echo Sounder (ARES)"
-
+    
     return dd

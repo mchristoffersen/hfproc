@@ -168,6 +168,7 @@ def main():
             tFrac[i] = time[i][1]
 
         # check if radar file start/stop times fall during nav file times
+        string_t = h5py.string_dtype(encoding='ascii')
         match = 0
         for track in tracks:
             if ((tFull[0]+tFrac[0]) >= track.startT) and ((tFull[-1]+tFrac[-1]) <= track.stopT):
@@ -184,7 +185,10 @@ def main():
                     "nav0", shape=nav.shape, data=nav, dtype=nav_t
                 )
                 nav0[:] = nav[:]
-                nav0.attrs.create("CRS", np.string_("WGS84"))
+                nav0.attrs.create("CRS", "WGS84", string_t)
+
+                description_attr = "Positions derived from the GPS used for OIB lidar, much higher accuracy than /raw/loc0."
+                nav0.attrs.create("description", description_attr, dtype=string_t)
  
                 # exit
                 break

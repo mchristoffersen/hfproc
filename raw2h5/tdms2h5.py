@@ -168,9 +168,11 @@ def parseRaw(fname):
     elif date.month == 8:
         dd["rx0"] = np.roll(dd["rx0"], 14, axis=0)
     else:
-        log.warning("No offset correction found for ")
+        log.warning("No offset correction found for " + fn)
 
-    dd["institution"] = "University of Arizona"
-    dd["instrument"] = "Arizona Radio Echo Sounder (ARES)"
+    # add extra offset for high pass malaspina track (mystery)
+    if(fn == "20180819-215243.tdms"):
+        log.warning("Adding malaspina high pass offset to " + fn) 
+        dd["rx0"] = np.roll(dd["rx0"], -40, axis=0)
 
     return dd

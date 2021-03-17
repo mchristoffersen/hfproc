@@ -77,6 +77,11 @@ def main():
         shuffle=True,
         fletcher32=True,
     )
+
+    string_t = h5py.string_dtype(encoding='ascii')
+    description_attr = "Surface clutter simulation to aid interpretation of the data."
+    clutter0.attrs.create("description", description_attr, dtype=string_t)
+    
     clutter0[:] = data=out.astype(np.float32)[:]
     f.close()
 
