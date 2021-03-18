@@ -29,7 +29,7 @@ def convert(fname, ftype, dest):
     if(dd["sig"] == "chirp"):
         fpfix = "IRARES1B"
     elif(dd["sig"] == "impulse"):
-        fpfix == "IRUAFHF1B"
+        fpfix = "IRUAFHF1B"
     else:
         log.error("Invalid signal type for file prefix decision")
         return 1

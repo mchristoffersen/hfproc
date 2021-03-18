@@ -198,10 +198,19 @@ def parseRaw(fname):
     else:
         log.warning("No TAI to UTC offset found for " + fn)
 
+    # Get possible bulk time shift
+    tshift = 0
+    if(date.year == 2013):
+        if(date.month == 3):
+            tshift = 652
+        elif(date.month == 5):
+            tshift = 696
+        log.warning("Applying %d second shift to " % tshift + fn)
+
     # Deal with duplicate times
     timen = np.zeros(len(time))
     for i in range(dd["ntrace"]):
-        timen[i] = time[i].value / 10e8 - taio
+        timen[i] = time[i].value / 10e8 - taio - tshift
 
     uniq, idx = np.unique(timen, return_index=True)
     x = np.array(range(len(timen)))
