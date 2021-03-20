@@ -185,7 +185,7 @@ def main():
                     "nav0", shape=nav.shape, data=nav, dtype=nav_t
                 )
                 nav0[:] = nav[:]
-                nav0.attrs.create("CRS", "WGS84", string_t)
+                nav0.attrs.create("CRS", "WGS84", dtype=string_t)
 
                 description_attr = "Positions derived from the GPS used for OIB lidar, much higher accuracy than /raw/loc0."
                 nav0.attrs.create("description", description_attr, dtype=string_t)

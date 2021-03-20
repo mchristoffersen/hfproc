@@ -24,17 +24,18 @@ class h5Struct:
             "ext/srf0count"
         ]
         self.attrs = {
-            "": ["institution", "instrument"],
-            "raw": [],
-            "drv": [],
-            "ext": [],
-            "drv/pick": [],
+            "": ["institution", "instrument", "description"],
+            "raw": ["description"],
+            "drv": ["description"],
+            "ext": ["description"],
+            "drv/pick": ["description"],
             "raw/rx0": [
                 "numTrace",
                 "samplesPerTrace",
                 "samplingFrequency",
                 "stacking",
                 "traceLength",
+                "description"
             ],
             "raw/tx0": [
                 "signal",
@@ -42,17 +43,18 @@ class h5Struct:
                 "pulseRepetitionFrequency",
                 "length",
                 "bandwidth",
+                "description"
             ],
-            "raw/loc0": ["CRS"],
-            "raw/time0": ["clock", "unit"],
-            "drv/clutter0": [],
-            "drv/proc0": ["note"],
-            "drv/pick/twtt_surf": ["unit"],
-            "drv/pick/twtt_bed": ["unit"],
-            "drv/pick/thick": ["unit"],
-            "ext/nav0": ["CRS"],
-            "ext/srf0": ["verticalDatum", "unit"],
-            "ext/srf0count": []
+            "raw/loc0": ["CRS", "description"],
+            "raw/time0": ["clock", "unit", "description"],
+            "drv/clutter0": ["description"],
+            "drv/proc0": ["note", "description"],
+            "drv/pick/twtt_surf": ["unit", "description"],
+            "drv/pick/twtt_bed": ["unit", "description"],
+            "drv/pick/thick": ["unit", "description"],
+            "ext/nav0": ["CRS", "description"],
+            "ext/srf0": ["verticalDatum", "unit", "description"],
+            "ext/srf0count": ["description"]
         }
 
         # Check that all groups/dsets are in attrs list

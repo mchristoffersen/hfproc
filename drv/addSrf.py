@@ -27,8 +27,8 @@ def main():
       print("Unknown file type:", f)
 
   for data in data:
-    countf = data.replace("/hdf5/", "/srf/").replace(".h5", "_count.csv")
-    srff = data.replace("/hdf5/", "/srf/").replace(".h5", "_srf.csv")
+    countf = data.replace("/hdf5/", "/srf/").replace(".h5", "_count.csv") #.replace("IRARES1B_","").replace("IRUAFHF1B_","")
+    srff = data.replace("/hdf5/", "/srf/").replace(".h5", "_srf.csv") #.replace("IRARES1B_","").replace("IRUAFHF1B_","")
 
     try:
       f = h5py.File(data, "a")

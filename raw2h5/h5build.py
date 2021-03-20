@@ -25,6 +25,19 @@ def generateChirp(cf, bw, length, fs):
 
 
 def h5build(dd, outf):
+    # Root attrs
+    if(dd["sig"] == "chirp"):
+        dd["institution"] = "University of Arizona"
+        dd["instrument"] =  "Arizona Radio-Echo Sounder (ARES)"
+        dd["description"] = "Radar data acquired by the University of Arizona's Arizona Radio-Echo Sounder (ARES) instrument over glaciers in Alaska. Data and important metadata are provided in HDF5 files, browse products are provided as PNG formatted images."
+    elif(dd["sig"] == "impulse"):
+        dd["institution"] = "University of Alaska Fairbanks"
+        dd["instrument"] = "University of Alaska Fairbanks High Frequency Radar Sounder (UAF HF)"
+        dd["description"] = "Radar data acquired by the University of Alaska Fairbanks High Frequency Radar Sounder (UAF HF) instrument over glaciers in Alaska. Data and important metadata are provided in HDF5 files, browse products are provided as PNG formatted images."
+    else:
+        log.error("Invalid signal type for root metadata selection")
+        return 1
+
     # Verify data dictionary contents
     if ddVerify(dd):
         log.error("Invalid data dict " + os.path.basename(outf))
@@ -48,6 +61,11 @@ def h5build(dd, outf):
     # |  |-pick
     # |-ext
 
+    fd.attrs.create("institution", dd["institution"], dtype=string_t)
+    fd.attrs.create("instrument", dd["instrument"], dtype=string_t)
+    fd.attrs.create("description", dd["description"], dtype=string_t)
+
+
     raw = fd.create_group("raw")
     drv = fd.create_group("drv")
     pick = drv.create_group("pick")
@@ -64,21 +82,6 @@ def h5build(dd, outf):
 
     description_attr = "Glacier bed pick data"
     pick.attrs.create("description", description_attr, dtype=string_t)
-
-    # Root attrs
-    if(dd["sig"] == "chirp"):
-        fd.attrs.create("institution", "University of Arizona", dtype=string_t)
-        fd.attrs.create("instrument", "Arizona Radio-Echo Sounder (ARES)", dtype=string_t)
-        description_attr = "Radar data acquired by the University of Arizona's Arizona Radio-Echo Sounder (ARES) instrument over glaciers in Alaska. Data and important metadata are provided in HDF5 files, browse products are provided as PNG formatted images."
-        fd.attrs.create("description", description_attr, dtype=string_t)
-    elif(dd["sig"] == "impulse"):
-        fd.attrs.create("institution", "University of Alaska Fairbanks", dtype=string_t)
-        fd.attrs.create("instrument", "University of Alaska Fairbanks High Frequency Radar Sounder (UAF HF)", dtype=string_t)
-        description_attr = "Radar data acquired by the University of Alaska Fairbanks High Frequency Radar Sounder (UAF HF) instrument over glaciers in Alaska. Data and important metadata are provided in HDF5 files, browse products are provided as PNG formatted images."
-        fd.attrs.create("description", description_attr, dtype=string_t)
-    else:
-        log.error("Invalid signal type for root metadata selection")
-        return 1
 
     # rx0 dataset
     rx0 = raw.create_dataset(
@@ -129,7 +132,7 @@ def h5build(dd, outf):
 
         # tx0 dataset
         tx0 = raw.create_dataset("tx0", data=ch, dtype=np.float32)
-        tx0.attrs.create("signal", "tone", string_t)
+        tx0.attrs.create("signal", "tone", dtype=string_t)
 
         txlen_attr = np.array([(dd["txlen"],"second")], dtype=[("value","f8"),("unit",string_t)])
         tx0.attrs.create("length", txlen_attr[0], dtype=txlen_attr.dtype)
@@ -142,7 +145,7 @@ def h5build(dd, outf):
 
         # tx0 dataset
         tx0 = raw.create_dataset("tx0", data=ch, dtype=np.float32)
-        tx0.attrs.create("signal", "impulse", string_t)
+        tx0.attrs.create("signal", "impulse", dtype=string_t)
 
 
     else:

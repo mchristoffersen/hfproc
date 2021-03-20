@@ -226,7 +226,7 @@ def proc(fn):
         pc = rx0
 
         # Add 470 ns offset for impulse trigger delay and antenna dangle
-        nsamp = int(470e-9/(1/f["raw"]["rx0"].attrs["samplingFrequency"]))
+        nsamp = int(470e-9/(1/f["raw"]["rx0"].attrs["samplingFrequency"][0]))
         pc = np.roll(pc, nsamp, axis=0)
 
         proc0 = f["drv"].require_dataset(
@@ -249,10 +249,10 @@ def proc(fn):
         f.close()
 
     elif sig == b"chirp":
-        cf = f["raw"]["tx0"].attrs["centerFrequency"]
-        bw = f["raw"]["tx0"].attrs["bandwidth"]
-        tl = f["raw"]["tx0"].attrs["length"]
-        fs = f["raw"]["rx0"].attrs["samplingFrequency"]
+        cf = f["raw"]["tx0"].attrs["centerFrequency"][0]
+        bw = f["raw"]["tx0"].attrs["bandwidth"][0]
+        tl = f["raw"]["tx0"].attrs["length"][0]
+        fs = f["raw"]["rx0"].attrs["samplingFrequency"][0]
 
         ### Process data
         # Generate reference chirp

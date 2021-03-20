@@ -3,6 +3,7 @@ def ddVerify(dd):
     allK = [
         "institution",
         "instrument",
+	"description",
         "sig",
         "stack",
         "spt",

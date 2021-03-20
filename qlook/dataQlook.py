@@ -36,7 +36,7 @@ def saveImage(data, fs, name):
 def genQlook(fname, outd):
     fd = h5py.File(fname, "r")
 
-    fs = fd["raw"]["rx0"].attrs["samplingFrequency"]
+    fs = fd["raw"]["rx0"].attrs["samplingFrequency"][0]
 
     try:
         proc0 = fd["drv"]["proc0"][:]

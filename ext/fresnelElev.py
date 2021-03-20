@@ -117,7 +117,7 @@ def xtractWrap(lasDir, data, odir):
 
     sig = f["raw"]["tx0"].attrs["signal"]
 
-    wavel = 3e8 / f["raw"]["tx0"].attrs["centerFrequency"]
+    wavel = 3e8 / f["raw"]["tx0"].attrs["centerFrequency"][0]
 
     isrs = osr.SpatialReference()
     isrs.ImportFromEPSG(4326)  # WGS84 locations
