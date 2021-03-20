@@ -77,7 +77,7 @@ def main():
 
     twtt_surf_pick.attrs.create("unit", "second", dtype=string_t)
 
-    description_attr = "Two way travel time to the lidar derived surface in each trace inseconds.  No data value is -1.  Calculated using /ext/srf0 and /ext/nav0."
+    description_attr = "Two way travel time to the lidar derived surface in each trace in seconds.  No data value is -1.  Calculated using /ext/srf0 and /ext/nav0."
     twtt_surf_pick.attrs.create("description", description_attr, dtype=string_t)
     
     print(data, "WORKED")

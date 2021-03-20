@@ -74,7 +74,7 @@ def h5build(dd, outf):
     description_attr = "Data as recorded by the radar with minimal processing."
     raw.attrs.create("description", description_attr, dtype=string_t)
 
-    description_attr = "External (to the radar) data to aid interpretation of radar data"
+    description_attr = "External (to the radar) data to aid interpretation of radar data."
     ext.attrs.create("description", description_attr, dtype=string_t)
 
     description_attr = "Data products derived from data in the raw and/or drv groups."
