@@ -32,13 +32,18 @@ def main():
 
     try:
       f = h5py.File(data, "a")
-      count = np.loadtxt(countf)
-      srf = np.loadtxt(srff)
     except Exception as e:
       f.close()
       print("Error reading file")
       print(e)
       continue
+
+    if(os.path.isfile(countf) and os.path.isfile(srff))
+      count = np.loadtxt(countf)
+      srf = np.loadtxt(srff)
+    else:
+      count = np.zeros(f["/raw/rx0"].attrs["numTrace"])
+      srf = -9999*np.ones(f["/raw/rx0"].attrs["numTrace"])
 
     if(srf.shape == ()):
         print("Empty surface")
