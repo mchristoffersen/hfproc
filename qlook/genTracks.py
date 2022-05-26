@@ -33,12 +33,15 @@ def main():
 
             f = h5py.File(fdir + "/" + path, "r")
 
-            #loc0 = f["raw"]["loc0"][:]
             if("nav0" not in f["ext"].keys()):
-                f.close()
-                continue
-
-            nav0 = f["ext"]["nav0"][:]
+                print("NO NAV IN " + path + " USING LOC")
+                nav0 = f["raw"]["loc0"][:]
+                print("SUBSAMPLING BY 10")
+                nav0 = nav0[::10]
+                #f.close()
+                #continue
+            else:
+                nav0 = f["ext"]["nav0"][:]
 
             if len(nav0) < 2:
                 f.close()
